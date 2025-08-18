@@ -39,6 +39,35 @@ namespace _ed_cpp{
 		<<yh2;
 		return ss.str();
 	}
+	bool runProcess1(const std::string &commandLine) {
+	    STARTUPINFOA si;
+	    PROCESS_INFORMATION pi;
+	    ZeroMemory(&si, sizeof(si));
+	    si.cb = sizeof(si);
+	    ZeroMemory(&pi, sizeof(pi));
+	    // 注意：CreateProcess 需要可写缓冲区
+	    char *cmd = _strdup(commandLine.c_str());
+	    BOOL success = CreateProcessA(
+	        NULL,   // 可执行文件路径（NULL=命令行第一个 token）
+	        cmd,    // 命令行（必须可写）
+	        NULL,   // 进程安全属性
+	        NULL,   // 线程安全属性
+	        TRUE,   // 是否继承句柄
+	        CREATE_NEW_CONSOLE ,      // 创建选项
+	        NULL,   // 环境变量
+	        NULL,   // 当前目录
+	        &si,    // 启动参数
+	        &pi     // 进程信息
+	    );
+	    free(cmd);
+	    if (!success) {
+	        std::cerr << "CreateProcess failed. Error code: " << GetLastError() << std::endl;
+	        return false;
+	    }
+	    CloseHandle(pi.hProcess);
+	    CloseHandle(pi.hThread);
+	    return true;
+	}
 	bool runProcess(const std::string &commandLine) {
 	    STARTUPINFOA si;
 	    PROCESS_INFORMATION pi;
@@ -97,8 +126,10 @@ namespace _ed_cpp{
 		cout<<"编译时间:"<<dt<<"ms\n";
 		if(run){
 			cout<<"开始运行\n";
-			cmd = "start \""+exedir+"\\tool\\ConsolePauser.exe\" \""+out+"\"";
-			system(cmd.c_str());
+			cmd = "\""+exedir+"tool\\ConsolePauser.exe\" \""+out+"\"";
+			cout<<"命令:"<<cmd<<endl;
+			runProcess1(cmd);
+			//system(cmd.c_str());
 		}
 		system("pause");
 	}

@@ -4,7 +4,10 @@
 #include"editorapi.cpp"
 #include"editorcpp.cpp"
 #include"editorrgb.cpp"
+#include"editorjqb.cpp"
+#include"editorchar.cpp"
 using namespace std;
+//-std=c++14 -O2 -s -m32
 namespace _ed_code{
 	int _ed_width,_ed_height;
 	int _ed_top = 0;//顶端的行数 
@@ -31,7 +34,7 @@ namespace _ed_code{
 	{"void",1},{"const",1},{"constexpr",1},{"inline",1},{"register",1},
 	{"namespace",1},{"static",1},{"priority_queue",1},{"auto",1},
 	{"class",1},{"public",1},{"volatile",1},{"protected",1},{"template",1},
-	{"wchar_t",1},{"wstring",1},
+	{"wchar_t",1},{"wstring",1},{"__int128",1},
 	};
 	unordered_map<string,bool> mp_c_hs2 = {
 	{"sort",1},{"unique",1},{"next_permutation",1},{"__builtin_popcount",1},{"__builtin_ctz",1},
@@ -46,13 +49,13 @@ namespace _ed_code{
 	unordered_map<char,bool> mp_c_qh = {
 	{'+',1},{'-',1},{'*',1},{'/',1},{'%',1},{'^',1},{'|',1},{'{',1},{'}',1},{'[',1},
 	{']',1},{'(',1},{')',1},{'&',1},{'!',1},{'~',1},{'<',1},{'>',1},{',',1},{'.',1},
-	{'=',1},{';',1},{':',1},
+	{'=',1},{';',1},{':',1},{'?',1},
 	};
-	
 	void _ed_outcol(string s,bool &f_dhzs){
 		bool f_define = 0;
 		bool f_str = 0;
 		bool f_zs = 0;
+		bool f_num = 0;
 		char lc = 0;
 		string gjz = "";
 		int cnt = 0;
@@ -96,7 +99,16 @@ namespace _ed_code{
 				putchar('/');
 				f_zs = 1;
 			}
-			if(!f_define && !f_str && !f_zs && !f_dhzs){
+			else if(!f_num && (isdigit(c)) && (mp_c_qh[lc] || lc==0 || lc==' ') && !f_define && !f_str && !f_zs && !f_dhzs){
+				f_num = 1;
+				g_conc.SetRGBmap(0x05);
+			}
+			else if(f_num && !(isdigit(c)||c=='.'||c=='L'||c=='F'||c=='U'||c=='x'||c=='X'||c=='b'||c=='B'
+			||c=='A'||c=='B'||c=='C'||c=='D'||c=='E'||c=='a'||c=='b'||c=='c'||c=='d'||c=='e'||c=='f')){
+				f_num = 0;
+				g_conc.SetRGBmap(0x0F);
+			}
+			if(!f_define && !f_str && !f_zs && !f_dhzs && !f_num){
 				if(mp_c_qh[c]==1||c==' '||cnt==s.size()-1){
 					if(mp_c_hs1[gjz]&&gjz.size()>0){
 						//EdmoveLeft(gjz.size());
@@ -264,7 +276,12 @@ namespace _ed_code{
 				zz_x++;
 				s = "";
 			}
-			else if(c==27||c==0 ||c==0xE0)break;
+			else if(c==27||c==0 ||c==0xE0){
+				if(s!="") v.insert(v.begin()+zz_x,s);
+				zz_x++;
+				s = "";
+				break;
+			}
 			else if(c=='\t'){
 				s+="    "; 
 			}
@@ -303,20 +320,17 @@ namespace _ed_code{
 		system("pause");
 	}
 	// 将文件每行内容读取到vector<string>
-	std::vector<std::string> readFileToVector(const std::string& filename) {
-	    std::vector<std::string> lines;
-	    std::ifstream file(filename);
-	    
+	vector<string> readFileToVector(const string& filename) {
+	    vector<string> lines;
+	    ifstream file(filename);
 	    if (!file.is_open()) {
-	        std::cerr << "Error opening file: " << filename << std::endl;
+	        cerr << "Error opening file: " << filename << endl;
 	        return lines;
 	    }
-	    
-	    std::string line;
-	    while (std::getline(file, line)) {
+	    string line;
+	    while (getline(file, line)) {
 	        lines.push_back(line);
 	    }
-	    
 	    file.close();
 	    return lines;
 	}
@@ -361,12 +375,56 @@ namespace _ed_code{
 		cout<<"执行结果:"<<r<<endl;
 		system("pause");
 	}
+	void _edf_curto(){
+		system("cls");
+		clearInputBuffer();
+		EdmoveTo(0,0);
+		g_conc.SetRGBmap(135);
+		cout<<"cursor line number:\n";
+		int ln;
+		cin>>ln;
+		if(ln<0||ln>=v.size()){
+			ln = 0;
+		}
+		_ed_top = ln;
+		zz_x = ln;
+		zz_y = 0;
+	}
+	void _edf_jqb(){
+		system("cls");
+		clearInputBuffer();
+		EdmoveTo(0,0);
+		g_conc.SetRGBmap(135);
+		cout<<"将文件复制到剪切板\n";
+		cout<<"0.ansi 1.utf8 2.utf16\n";
+		int ec = 0;
+		cin>>ec;
+		string s = "";
+		for(int i = 0;i<(int)v.size();i++){
+			s+=v[i];
+			if(i!=v.size()-1)s+="\n";
+		}
+		_ed_jqb jq;
+		if(ec==0){
+			jq.setTextA(s.c_str());
+		}
+		if(ec==1){
+			string u = AnsiToUtf8(s);
+			jq.setTextUTF8(u.c_str());
+		}
+		if(ec==2){
+			wstring u = AnsiToUtf16(s);
+			jq.setTextW(u.c_str());
+		}
+		cout<<"已复制到剪切板\n";
+		system("pause");
+	}
 	void _edf_escape(){
 		system("cls");
 		EdmoveTo(0,0);g_conc.SetRGBmap(135);
 		cout<<"选择完成后如果没有反应按一次回车,部分功能需要保存后使用\n";
-		cout<<"0.exit\n1.insert\n2.leave cmd++\n3.save file\n4.load file\n5.complete\n6.complete and run\n7.about\n";
-		cout<<"8.obfuscate code\n";
+		cout<<"0.back\n1.insert\n2.exit cmd++\n3.save file\n4.load file\n5.complete\n6.complete and run\n7.about\n";
+		cout<<"8.obfuscate code\n9.move cursor\na.copy to clipboard\n";
 		int c = _getch();
 		switch (c){
 			case '0':return;break;
@@ -378,6 +436,8 @@ namespace _ed_code{
 			case '6':_ed_cpp::_ed_complete_file(1);break;
 			case '7':_eff_about();break;
 			case '8':_edf_obfus();break;
+			case '9':_edf_curto();break;
+			case 'a':_edf_jqb();break;
 		}
 		g_conc.SetRGBmap(15);
 		system("cls");
@@ -411,11 +471,10 @@ namespace _ed_code{
 		            case 27: _edf_escape(); break;     //escape
 		            default: _edf_addch(c); break;
 		        }
-		    }			
+		    }
 		}
-
 	    _ed_flash();
-	    g_conc.SetRGB(255,128,64);
+	    g_conc.SetRGBmap(8);
 	    EdmoveTo(_ed_line+1,0);
 	    printf("_ed_run zz:%d,%d top:%d line:%d vs:%d",zz_x,zz_y,_ed_top,_ed_line,v.size());
 	    EdmoveTo(zz_x-_ed_top,zz_y+3);
@@ -423,6 +482,7 @@ namespace _ed_code{
 	}
 }
 int main(){
+	SetConsoleTitle("Console C++ IDE");
 	_ed_code::init();
 	_ed_cpp::init();
 	_ed_code::_ed_flash();
