@@ -1,6 +1,7 @@
 #include<bits/stdc++.h>
 #include<conio.h>
 #include<sstream>
+#pragma once
 #include"editorapi.cpp"
 #include"editorrgb.cpp"
 #include"editorstr.cpp"

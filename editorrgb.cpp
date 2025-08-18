@@ -41,4 +41,5 @@ public:
         return bestColor;
     }
 };
+
 ConsoleColor g_conc;
