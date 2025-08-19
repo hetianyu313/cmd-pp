@@ -8,6 +8,7 @@
 #include"editorcwh.cpp"
 #include"editorchar.cpp"
 #include"editorview.cpp"
+#include"editorsrf.cpp"
 using namespace std;
 //-std=c++14 -O2 -s -m32
 namespace _ed_code{
@@ -48,6 +49,7 @@ namespace _ed_code{
 	{"virtual",1},{"operator",1},{"typedef",1},{"friend",1},
 	{"new",1},{"extern",1},{"enum",1},{"sizeof",1},{"private",1},
 	{"asm",1},{"delete",1},{"union",1},{"static_cast",1},{"reinterpret_cast",1},
+	{"NULL",1},{"nullptr",1}, 
 	};
 	unordered_map<char,bool> mp_c_qh = {
 	{'+',1},{'-',1},{'*',1},{'/',1},{'%',1},{'^',1},{'|',1},{'{',1},{'}',1},{'[',1},
@@ -450,10 +452,115 @@ namespace _ed_code{
 		g_conc.SetRGBmap(15);
 		system("cls");
 	}
+	void _edf_zhcn_display(vector<_sr_py> v,int p,string ci){
+		g_conc.SetRGBmap(8);
+		g_ktip = "home:上一页 end:下一页 escape:退出中文输入 0~9:选择 a-z:拼音输入 A-Z:直接输入";
+	    EdmoveTo(_ed_line+1,0);
+	    cout<<fl<<endl<<fl<<endl;
+	    EdmoveTo(_ed_line+1,0);
+	    printf("_ed_run zz:%d,%d top:%d line:%d vs:%d\n",zz_x,zz_y,_ed_top,_ed_line,v.size());
+	   	cout<<g_ktip<<"\n"; 
+		g_conc.SetRGBmap(112);
+		EdmoveTo(_ed_line+3,0);
+		cout<<fl<<"\n"<<fl<<"\n"<<fl;
+		EdmoveTo(_ed_line+3,0);
+		string s = "中文:";
+		for(int i = 0;i<10;i++){
+			int l = p*10+i;
+			if(l<v.size())s+=to_string(((i+1)%10))+"."+v[l].hz+" ";
+		}
+		cout<<s<<"\n"<<"页码:"<<p<<"/"<<v.size()/10<<"(候选:"<<v.size()<<")\n";
+		cout<<"输入:"<<ci;
+	}
+	void _edf_zhcn(){
+		system("cls");
+		_ed_flash();
+		int c;
+		int page = 0;
+		string ci = "";
+		//string str = "";
+		vector<_sr_py> vp;
+		_edf_zhcn_display(vp,page,ci);
+		while(1){//get char add transfer to Chinese
+			c = _getch();
+			if(c==8){
+				if(ci.size()>0) ci.erase(ci.size()-1);
+				vp = srf::py_near(ci);
+			}
+			else if(c == 0 || c == 0xE0){
+				c = _getch();
+				if((int)c==71&&(page*10+1<vp.size())){//home
+					page++;
+				}
+				else if((int)c==79&&page>0){//end
+					page--;
+				}
+				else{
+					c = 32;
+				}
+				//if(page>(vp.size()-1)/10) page = ((int)vp.size()-1)/10;
+				//if(page<=0) page=0;	
+			}
+			else if(c==13){
+				if(vp.size()>0){//删除中文区 
+					for(char i : vp[0].hz){//add string to code
+						_edf_addch(i);
+					}
+					//str+=vp[0].hz;
+					vp.clear();
+					ci= "";
+					_ed_flash();
+				}
+				else{
+					_edf_back();//删除代码区 
+				}
+			}
+			else if(c==27){
+				break;
+			}
+			else if(c>='a'&&c<='z'){
+				ci.push_back(c);
+				vp.clear();
+				vp = srf::py_near(ci);
+			}
+			else if(c>='A'&&c<='Z'){
+				//str+=c;
+				_edf_addch(c);
+				_ed_flash();
+			}
+			else if(c>='0'&&c<='9'){
+				int n = ((c-'0'-1+10)%10)+page*10;
+				if(vp.size()>n){
+					for(char i : vp[n].hz){//add string to code
+						_edf_addch(i);
+					}
+					//str+=vp[n].hz;
+					vp.clear();
+					ci= "";
+					_ed_flash();
+				}
+			}
+			if(page>vp.size()/10) page = ((int)vp.size())/10;
+			if(page<=0) page=0;
+			_edf_zhcn_display(vp,page,ci);
+		}
+		system("cls");
+		_ed_flash();
+		/*for(char i : str){//add string to code
+			_edf_addch(i);
+		}*/
+	}
+	void _edf_flash1(){
+		system("cls");
+		clearInputBuffer();
+		clearOutputBuffer(NULL);
+		EdmoveTo(0,0);
+		_ed_flash();
+	}
 	int _ed_run(){ 
 	    int c = _getch(); 
 	    //cout<<c<<endl;
-	    g_ktip = "esc:菜单";
+	    g_ktip = "esc:菜单 f1:插入 f2:输入中文 f3:刷新";
 	    if(zz_x<0||zz_x>v.size()){
 	    	zz_x = _ed_top;
 		}
@@ -471,6 +578,8 @@ namespace _ed_code{
 		            case 0x49: _edf_pgup(); break; // pgup
 		            case 0x51: _edf_pgdn(); break;  // pgdn
 		            case 0x3b: _edf_insert(); break;  // f1
+		            case 0x3c: _edf_zhcn(); break;  // f2
+		            case 0x3d: _edf_flash1(); break;  // f3
 		        }
 		    }
 		    else {
@@ -494,12 +603,19 @@ namespace _ed_code{
 	}
 }
 int main(){
+	cout<<"main:start console c++ ide\n";
 	SetConsoleTitle("Console C++ IDE");
 	_ed_code::init();
 	_ed_cpp::init();
 	cwh::init();
 	eview::init();
+	srf::init();
 	cout<<"main:init all end\n";
+	/*auto v = srf::py_near("bian");
+	cout<<v.size()<<endl;
+	for(auto i : v){
+		cout<<i.hz<<" "<<i.py<<endl;
+	}*/
 	//system("pause");
 	/*string s;
 	vector<pair<string, int>> v = {{"T1",0},{"T2",1},{"T3",2},{"T4",3},{"T5",4},{"T6",5},

@@ -25,6 +25,36 @@ EDITOR COORD EdgetPosition() {
 EDITOR void clearInputBuffer() {
 	std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 }
+EDITOR void clearOutputBuffer(HWND hConsole) {
+    if (!hConsole) return;
+    
+    // 获取当前控制台信息
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
+    
+    // 计算需要清除的字符数
+    COORD coordScreen = {0, 0};
+    DWORD cCharsWritten;
+    DWORD dwConSize = csbi.dwSize.X * csbi.dwSize.Y;
+    
+    // 用空格填充整个缓冲区
+    FillConsoleOutputCharacter(
+        GetStdHandle(STD_OUTPUT_HANDLE),
+        ' ',
+        dwConSize,
+        coordScreen,
+        &cCharsWritten
+    );
+    
+    // 重置光标位置
+    SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), coordScreen);
+    
+    // 可选：清除滚动缓冲区
+    if (hConsole) {
+        SendMessage(hConsole, EM_SETSEL, 0, -1);
+        SendMessage(hConsole, EM_REPLACESEL, 0, (LPARAM)"");
+    }
+}
 // 相对移动光标
 EDITOR void EdmoveRelative(int dx, int dy) {
     COORD current = EdgetPosition();

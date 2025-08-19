@@ -3,6 +3,7 @@
 #include"editorcpp.cpp"
 #include"editorapi.cpp"
 #include"editorrgb.cpp"
+#pragma once
 using namespace std;
 //editorview.cpp
 class _ed_view{
@@ -110,7 +111,7 @@ namespace eview{
 				cout<<"_ev_main:return to codemain\n";
 				return ;
 			}
-			if(s=="1"){
+			else if(s=="1"){
 				cout<<"所有主题都存放在setting中,默认主题为builtin\n请输入主题名称\n";
 				vector<string> v = GetFilesWithExtension((exedir_get()+"setting"),".view");
 				for(string i : v){
@@ -125,16 +126,17 @@ namespace eview{
 				cout<<"_ev_main:reload view\n";
 				init();
 			}
-			if(s=="2"){
+			else if(s=="2"){
 				cout<<"所有主题都存放在setting中,默认主题为Classic Plus Dark\n";
 				cout<<"当前主题存放在view_mr.ini\n";
 			}
-			if(s=="3"){
+			else if(s=="3"){
 				cout<<"当前主题\n";
 				cout<<"name:"<<g_view.v_name<<endl;
 				cout<<"auth:"<<g_view.v_auth<<endl;
 				cout<<"about:"<<g_view.v_about<<endl;
 			}
+			else return;
 		}
 	}
 }
