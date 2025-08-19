@@ -2,6 +2,7 @@
 #include <string>
 #include <algorithm>
 #include <cctype>
+#pragma once
 // 区分大小写的替换
 std::string replaceAll(const std::string& str, 
                       const std::string& from, 

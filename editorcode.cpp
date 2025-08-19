@@ -7,6 +7,7 @@
 #include"editorjqb.cpp"
 #include"editorcwh.cpp"
 #include"editorchar.cpp"
+#include"editorstr.cpp"
 #include"editorview.cpp"
 #include"editorsrf.cpp"
 using namespace std;
@@ -227,13 +228,15 @@ namespace _ed_code{
 			v[zz_x].insert(v[zz_x].begin()+zz_y,c);zz_y++;
 		}
 	}
-	void _edf_back() {
+	/*void _edf_back(bool ntp = 0) {
 		// 安全校验
 		if(v.empty() || zz_x >= v.size()) return;
 	    // 情况1：当前行有字符可删除（普通退格）
 	    if(zz_y > 0) {
+	    	char c = v[zz_x][zz_y-1];
 	        v[zz_x].erase(zz_y-1, 1);  // 删除前一个字符
 	        zz_y--;
+	        if(!(c>=32&&c<=127) && ntp==0) _edf_back(1);
 	    }
 	    // 情况2：行首且不是第一行（跨行退格）
 	    else if(zz_x > 0) {
@@ -249,6 +252,65 @@ namespace _ed_code{
 	        }
 	    }
 	    // 情况3：第一行行首（无操作）
+	}*/
+	// 窗口过程钩子
+	LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+	    if (msg == WM_CONTEXTMENU) {
+	        return 0; // 完全阻止右键菜单
+	    }
+	    return DefWindowProc(hWnd, msg, wParam, lParam);
+	}	
+	void _edf_nopaste() {
+	    HWND hConsole = GetConsoleWindow();
+	    // 修改窗口样式
+	    LONG_PTR style = GetWindowLongPtr(hConsole, GWL_STYLE);
+	    SetWindowLongPtr(hConsole, GWL_STYLE, style & ~WS_MAXIMIZEBOX & ~WS_SIZEBOX);
+	    // 设置新的窗口过程
+	    SetWindowLongPtr(hConsole, GWLP_WNDPROC, (LONG_PTR)WndProc);
+	    // 禁用快速编辑模式
+	    HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
+	    DWORD mode;
+	    GetConsoleMode(hInput, &mode);
+	    SetConsoleMode(hInput, mode & ~ENABLE_QUICK_EDIT_MODE);
+	    // 禁用系统菜单
+	    HMENU hMenu = GetSystemMenu(hConsole, FALSE);
+	    if (hMenu) {
+	        DeleteMenu(hMenu, SC_CLOSE, MF_BYCOMMAND);
+	        DeleteMenu(hMenu, SC_MINIMIZE, MF_BYCOMMAND);
+	        DeleteMenu(hMenu, SC_MAXIMIZE, MF_BYCOMMAND);
+	        DrawMenuBar(hConsole);
+	    }
+	}
+	void _edf_back() {
+	    if (v.empty() || zz_x >= v.size()) return;
+	    // 情况1：当前行有字符可删
+	    if (zz_y > 0) {
+	        unsigned char c = static_cast<unsigned char>(v[zz_x][zz_y - 1]);
+	        if (zz_y >= 2) {
+	            unsigned char c1 = static_cast<unsigned char>(v[zz_x][zz_y - 2]);
+	            unsigned char c2 = c;
+	            // c1 在 0x81~0xFE 且 c2 在 0x40~0xFE 且 不等于 0x7F
+	            if (c1 >= 0x81 && c1 <= 0xFE &&
+	                c2 >= 0x40 && c2 <= 0xFE && c2 != 0x7F) {
+	                v[zz_x].erase(zz_y - 2, 2);
+	                zz_y -= 2;
+	                return;
+	            }
+	        }
+	        v[zz_x].erase(zz_y - 1, 1);
+	        zz_y--;
+	    }
+	    // 情况2：行首且不是第一行（跨行退格）
+	    else if (zz_x > 0) {
+	        int prev_len = v[zz_x - 1].size();
+	        v[zz_x - 1] += v[zz_x];
+	        v.erase(v.begin() + zz_x);
+	        zz_x--;
+	        zz_y = prev_len;
+	        if (zz_x < _ed_top) {
+	            _ed_top = std::max(0, zz_x - _ed_line / 2);
+	        }
+	    }
 	}
 	void _edf_home(){
 		zz_y = 0;
@@ -297,7 +359,7 @@ namespace _ed_code{
 			else{
 				s+=c;
 			}
-			printf("input %d bytes\n",cnt);
+			if(cnt%100==0)printf("input %d bytes\n",cnt);
 			cnt++;
 		}
 		zz_x = 0;
@@ -359,7 +421,7 @@ namespace _ed_code{
 		_ed_top = 0;
 		system("pause");
 	}
-	void _eff_about(){
+	void _edf_about(){
 		system("cls");
 		clearInputBuffer();
 		cout<<"CMD++\nby HeTianYu313 (Github.com)\nLanguage:C++(MinGW64)\n";
@@ -379,6 +441,25 @@ namespace _ed_code{
 		g_conc.SetRGBmap(135);
 		system("pause");
 		string cmd = "\""+_ed_cpp::exedir+"tool\\CodeObfuscator.exe\" \""+_ed_cpp::_ed_in_f+"\" \""+fn+"\"";
+		cout<<"命令:"<<cmd<<endl;
+		int r = _ed_cpp::runProcess(cmd.c_str());
+		cout<<"执行结果:"<<r<<endl;
+		system("pause");
+	}
+	void _edf_cstyle(){
+		system("cls");
+		clearInputBuffer();
+		EdmoveTo(0,0);
+		g_conc.SetRGBmap(135);
+		cout<<"Input styled code path:\n";
+		string fn;
+		getline(cin,fn);
+		g_conc.SetRGBmap(78);
+		cout<<"警告:代码整理功能不推荐使用,产生后果自负!\n";
+		cout<<"     这是最后一次提醒,你可以关闭窗口     \n";
+		g_conc.SetRGBmap(135);
+		system("pause");
+		string cmd = "\""+_ed_cpp::exedir+"tool\\cpp_code_nai.exe\" \""+_ed_cpp::_ed_in_f+"\" \""+fn+"\"";
 		cout<<"命令:"<<cmd<<endl;
 		int r = _ed_cpp::runProcess(cmd.c_str());
 		cout<<"执行结果:"<<r<<endl;
@@ -428,12 +509,162 @@ namespace _ed_code{
 		cout<<"已复制到剪切板\n";
 		system("pause");
 	}
+	// 记录上一次查找内容和光标位置
+	string _last_find = "";
+	int _last_x = -1;
+	int _last_y = -1;
+	// 查找第一个匹配
+	void _edf_find() {
+	    system("cls");
+	    clearInputBuffer();
+	    EdmoveTo(0,0); g_conc.SetRGBmap(135);
+	
+	    cout << "Find text内容:" << endl;
+	    string keyword;
+	    getline(cin, keyword);
+	
+	    if(keyword.empty()) {
+	        cout << "Empty input, cancelled.\n";
+	        system("pause");
+	        return;
+	    }
+	
+	    bool found = false;
+	    int fx = -1, fy = -1;
+	
+	    for(size_t i = 0; i < v.size(); i++) {
+	        size_t pos = v[i].find(keyword);
+	        if(pos != string::npos) {
+	            fx = (int)i;
+	            fy = (int)pos;
+	            found = true;
+	            break;
+	        }
+	    }
+	
+	    if(found) {
+	        zz_x = fx; zz_y = fy;
+	        if(zz_x < _ed_top) {
+	            _ed_top = zz_x;
+	        } else if(zz_x >= _ed_top + _ed_line) {
+	            _ed_top = max(0, zz_x - _ed_line/2);
+	        }
+	        _last_find = keyword;
+	        _last_x = zz_x;
+	        _last_y = zz_y;
+	        cout << "Found at line " << fx << " col " << fy << endl;
+	        Sleep(200);
+	    } else {
+	        cout << "Not found: " << keyword << endl;
+	        system("pause");
+	    }
+	    //system("pause");
+	}
+	// 查找下一个（基于上一次关键字/位置）
+	void _edf_find_next() {
+	    if(_last_find.empty()) {
+	        system("cls");
+	        cout << "No previous search. Use find first.\n";
+	        system("pause");
+	        //cout<<"_last_find empty,user input\n";
+	        //_edf_find();
+	        return;
+	    }
+	
+	    bool found = false;
+	    int fx = -1, fy = -1;
+	
+	    // 从当前位置继续往后查找
+	    for(size_t i = _last_x; i < v.size(); i++) {
+	        size_t startPos = (i == _last_x ? _last_y + 1 : 0);
+	        size_t pos = v[i].find(_last_find, startPos);
+	        if(pos != string::npos) {
+	            fx = (int)i;
+	            fy = (int)pos;
+	            found = true;
+	            break;
+	        }
+	    }
+	
+	    if(found) {
+	        zz_x = fx; zz_y = fy;
+	        if(zz_x < _ed_top) {
+	            _ed_top = zz_x;
+	        } else if(zz_x >= _ed_top + _ed_line) {
+	            _ed_top = max(0, zz_x - _ed_line/2);
+	        }
+	        _last_x = zz_x;
+	        _last_y = zz_y;
+	        system("cls");
+	        cout << "Next found at line " << fx << " col " << fy << endl;
+	    } else {
+	        system("cls");
+	        cout << "No more matches of \"" << _last_find << "\"\n";
+	        system("pause");
+	    }
+	    //system("pause");
+	    Sleep(200);
+	}
+	// 替换（一个或全部）
+	void _edf_replace() {
+	    system("cls");
+	    clearInputBuffer();
+	    EdmoveTo(0,0); g_conc.SetRGBmap(135);
+	
+	    string from, to;
+	    cout << "Replace what从? ";
+	    getline(cin, from);
+	    if(from.empty()) {
+	        cout << "Empty search, cancelled.\n";
+	        system("pause");
+	        return;
+	    }
+	    cout << "Replace with替换到? ";
+	    getline(cin, to);
+	
+	    cout << "Replace mode: \n1. Replace first occurrence替换第一个\n2. Replace all替换全部\n";
+	    char c = _getch();
+	
+	    int cnt = 0;
+	
+	    if(c == '1') {
+	        bool done = false;
+	        for(size_t i = 0; i < v.size() && !done; i++) {
+	            size_t pos = v[i].find(from);
+	            if(pos != string::npos) {
+	                v[i].replace(pos, from.size(), to);
+	                zz_x = (int)i;
+	                zz_y = (int)(pos + to.size());
+	                if(zz_x < _ed_top) {
+	                    _ed_top = zz_x;
+	                } else if(zz_x >= _ed_top + _ed_line) {
+	                    _ed_top = max(0, zz_x - _ed_line/2);
+	                }
+	                cnt = 1;
+	                done = true;
+	            }
+	        }
+	    } else if(c == '2') {
+	        for(size_t i = 0; i < v.size(); i++) {
+	            size_t pos = 0;
+	            while((pos = v[i].find(from, pos)) != string::npos) {
+	                v[i].replace(pos, from.size(), to);
+	                pos += to.size();
+	                cnt++;
+	            }
+	        }
+	    }
+	
+	    cout << "Replaced " << cnt << " occurrences.\n";
+	    system("pause");
+	}
 	void _edf_escape(){
 		system("cls");
 		EdmoveTo(0,0);g_conc.SetRGBmap(135);
 		cout<<"选择完成后如果没有反应按一次回车,部分功能需要保存后使用\n";
 		cout<<"0.back\n1.insert\n2.exit cmd++\n3.save file\n4.load file\n5.complete\n6.complete and run\n7.about\n";
 		cout<<"8.obfuscate code\n9.move cursor\na.copy to clipboard\nb.set view of IDE\n";
+		cout<<"c.code style\nd.find first\ne.find\nf.replace\n";
 		int c = _getch();
 		switch (c){
 			case '0':return;break;
@@ -443,11 +674,15 @@ namespace _ed_code{
 			case '4':_edf_load_file();break;
 			case '5':_ed_cpp::_ed_complete_file(0);break;
 			case '6':_ed_cpp::_ed_complete_file(1);break;
-			case '7':_eff_about();break;
+			case '7':_edf_about();break;
 			case '8':_edf_obfus();break;
 			case '9':_edf_curto();break;
 			case 'a':_edf_jqb();break;
 			case 'b':eview::_ev_main();break;
+			case 'c':_edf_cstyle();break;
+			case 'd':_edf_find();break;
+			case 'e':_edf_find_next();break;
+			case 'f':_edf_replace();break;
 		}
 		g_conc.SetRGBmap(15);
 		system("cls");
@@ -471,6 +706,7 @@ namespace _ed_code{
 		}
 		cout<<s<<"\n"<<"页码:"<<p<<"/"<<v.size()/10<<"(候选:"<<v.size()<<")\n";
 		cout<<"输入:"<<ci;
+		EdmoveTo(zz_x-_ed_top,zz_y+3);
 	}
 	void _edf_zhcn(){
 		system("cls");
@@ -484,7 +720,11 @@ namespace _ed_code{
 		while(1){//get char add transfer to Chinese
 			c = _getch();
 			if(c==8){
-				if(ci.size()>0) ci.erase(ci.size()-1);
+				if(ci.size()>0) ci.erase(ci.size()-1);//删除中文区
+				else{
+					_edf_back();//删除代码区 
+					_ed_flash();
+				}
 				vp = srf::py_near(ci);
 			}
 			else if(c == 0 || c == 0xE0){
@@ -496,13 +736,19 @@ namespace _ed_code{
 					page--;
 				}
 				else{
-					c = 32;
+					switch(c){
+						case 72: _edf_up();_ed_flash(); break;    // VK_UP
+			            case 80: _edf_down();_ed_flash(); break;  // VK_DOWN
+			            case 75: _edf_left();_ed_flash(); break;  // VK_LEFT
+			            case 77: _edf_right();_ed_flash(); break; // VK_RIGHT
+			            default: c = 32;
+					}
 				}
 				//if(page>(vp.size()-1)/10) page = ((int)vp.size()-1)/10;
 				//if(page<=0) page=0;	
 			}
 			else if(c==13){
-				if(vp.size()>0){//删除中文区 
+				if(vp.size()>0){ 
 					for(char i : vp[0].hz){//add string to code
 						_edf_addch(i);
 					}
@@ -512,8 +758,9 @@ namespace _ed_code{
 					_ed_flash();
 				}
 				else{
-					_edf_back();//删除代码区 
-				}
+					_edf_enter();
+					_ed_flash();
+				} 
 			}
 			else if(c==27){
 				break;
@@ -552,6 +799,12 @@ namespace _ed_code{
 	}
 	void _edf_flash1(){
 		system("cls");
+	    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+	    DWORD mode;
+	    GetConsoleMode(hConsole, &mode);
+	    SetConsoleMode(hConsole, ENABLE_PROCESSED_INPUT | ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT);
+	    CONSOLE_SCREEN_BUFFER_INFO csbi;
+	    GetConsoleScreenBufferInfo(hConsole, &csbi);
 		clearInputBuffer();
 		clearOutputBuffer(NULL);
 		EdmoveTo(0,0);
@@ -610,6 +863,7 @@ int main(){
 	cwh::init();
 	eview::init();
 	srf::init();
+	_ed_code::_edf_nopaste();
 	cout<<"main:init all end\n";
 	/*auto v = srf::py_near("bian");
 	cout<<v.size()<<endl;
