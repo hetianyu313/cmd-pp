@@ -15,10 +15,11 @@ using namespace std;
 namespace _ed_code{
 	int _ed_width,_ed_height;
 	int _ed_top = 0;//顶端的行数 
-	int _ed_line = 0;//界面行数 
+	int _ed_line = 20;//界面行数 
 	int zz_x = 0,zz_y = 0;//指针行\列 
 	vector<string> v = {""};
 	string g_ktip = "";//按键提示 
+	string g_doc = "";
 	int init(){
 		system("cls");
 		Edinit();
@@ -57,7 +58,27 @@ namespace _ed_code{
 	{']',1},{'(',1},{')',1},{'&',1},{'!',1},{'~',1},{'<',1},{'>',1},{',',1},{'.',1},
 	{'=',1},{';',1},{':',1},{'?',1},
 	};
-	bool fc_zdbq = 1;//当前状态是否允许自动补全,比如 " 中不补全 
+	unordered_map<string, vector<string>> docMap;
+	bool fc_zdbq = 1;//当前状态是否允许自动补全,比如 " 中不补全
+	void load_docmap(){
+		string fn = exedir_get()+"setting\\docmap.ini";
+		cout<<"load_docmap:load from "<<fn<<endl;
+		docMap.clear();
+		string s,t;
+		ifstream ifs(fn.c_str());
+		while(1){
+			getline(ifs,s);
+			if(s=="") break;
+			vector<string> sv;
+			while(1){
+				getline(ifs,t);
+				sv.push_back(t);
+				if(t=="")break;
+			}
+			docMap[s] = sv;
+		}
+		cout<<"load_docmap:loaded "<<docMap.size()<<" items of docMap\n";
+	}
 	void _ed_outcol(string s,bool &f_dhzs,int col = -1){
 		bool f_define = 0;
 		bool f_str = 0;
@@ -158,13 +179,46 @@ namespace _ed_code{
 					g_conc.SetRGBmap(g_view.c_code);
 					gjz+=c;
 				}
-			} 
+			}
+			if(col==zz_x && !gjz.empty() && docMap.find(gjz) != docMap.end()){
+			    //g_ktip += " doc:" + gjz; // 标记这个词有文档
+			    g_doc = gjz;
+			}
 			lc = c;//last char
 			cnt++;
 			if(!no_putchar_this)putchar(c);
 		}
 	}
 	const string fl = "																														";
+	
+	void fillline(int i){
+		COORD coord = {0, (SHORT)i}; // 第 i 行
+		DWORD written;
+		FillConsoleOutputCharacterA(hConsole, ' ', _ed_width, coord, &written);
+		FillConsoleOutputAttribute(hConsole,g_view.c_code, _ed_width, coord, &written);
+		g_conc.SetRGBmap(g_view.c_line);
+		//g_conc.SetRGBmap((g_view.c_code%16+1)%16,g_view.c_code/16);
+		EdmoveTo(i,0);
+		//cout<<fl;
+	}
+	void _edf_doc_display(const string& key){
+	    if(docMap.find(key) == docMap.end()) return;
+	    //EdmoveTo(_ed_line+6, 0); 
+	    //g_conc.SetRGBmap(120);
+	    //cout<<string(_ed_width, ' ')<<endl;
+	    vector<string> &lines = docMap[key];
+	    fillline(_ed_line+5);
+	    fillline(_ed_line+6);
+	    fillline(_ed_line+7);
+	    fillline(_ed_line+8);
+	    fillline(_ed_line+9);
+	    for(size_t i=0;i<lines.size();i++){
+	        EdmoveTo(_ed_line+5+i,0);
+	        g_conc.SetRGBmap(120);
+	        cout<<lines[i];
+	    }
+	    g_conc.SetRGBmap(15);
+	}
 	void _ed_flash(){
 		//system("cls");
 		EdmoveTo(0,0);
@@ -189,6 +243,11 @@ namespace _ed_code{
 			g_conc.SetRGBmap(g_view.c_code);
 			//cout<<v[cl]<<endl;
 			_ed_outcol(v[cl],f_dhzs,i==zz_x?i:-1);
+		}
+		// 在最底部，根据最新关键字弹帮助
+		if(g_doc!=""){
+		    //string key = g_ktip.substr(g_ktip.find("doc:")+4);
+		    _edf_doc_display(g_doc);
 		}
 	}
 	void _edf_up(){
@@ -279,7 +338,7 @@ namespace _ed_code{
 	    if (zz_x > _ed_top + _ed_line) _ed_top = zz_x - _ed_line;
 	}
 	unordered_map<char,char> zdbq = {
-	{'(',')'}/*,{'{','}'}*/,{'[',']'},{'<','>'},{'\"','\"'},
+	{'(',')'}/*,{'{','}'},{'<','>'}*/,{'[',']'},{'\"','\"'},
 	{'\'','\''},//自动补全 
 	};
 	void _edf_addch(char c, bool sd = 0) {
@@ -774,12 +833,17 @@ namespace _ed_code{
 	}
 	void _edf_zhcn_display(vector<_sr_py> v,int p,string ci){
 		g_conc.SetRGBmap(8);
+		fillline(_ed_line+1);
+		fillline(_ed_line+2);
+		fillline(_ed_line+3);
+		fillline(_ed_line+4);
+		//fillline(_ed_line+5);
 		g_ktip = "home:上一页 end:下一页 escape:退出中文输入 0~9:选择 a-z:拼音输入 A-Z:直接输入";
 		EdmoveTo(_ed_line+1,0);
 		cout<<fl<<endl<<fl<<endl;
 		EdmoveTo(_ed_line+1,0);
 		printf("_ed_run zz:%d,%d top:%d line:%d vs:%d\n",zz_x,zz_y,_ed_top,_ed_line,v.size());
-		   cout<<g_ktip<<"\n"; 
+		cout<<g_ktip<<"\n"; 
 		g_conc.SetRGBmap(112);
 		EdmoveTo(_ed_line+3,0);
 		cout<<fl<<"\n"<<fl<<"\n"<<fl;
@@ -789,7 +853,7 @@ namespace _ed_code{
 			int l = p*10+i;
 			if(l<v.size())s+=to_string(((i+1)%10))+"."+v[l].hz+" ";
 		}
-		cout<<s<<"\n"<<"页码:"<<p<<"/"<<v.size()/10<<"(候选:"<<v.size()<<")\n";
+		cout<<s<<"\n"<<"页码:"<<p<<"/"<<v.size()/10<<"(候选:"<<v.size()<<")";
 		cout<<"输入:"<<ci;
 		EdmoveTo(zz_x-_ed_top,zz_y+3);
 	}
@@ -943,8 +1007,9 @@ namespace _ed_code{
 		EdmoveTo(_ed_line+1,0);
 		cout<<fl<<endl<<fl<<endl;
 		EdmoveTo(_ed_line+1,0);
+		g_conc.SetRGBmap(8);
 		printf("_ed_run zz:%d,%d top:%d line:%d vs:%d\n",zz_x,zz_y,_ed_top,_ed_line,v.size());
-		cout<<g_ktip<<"\n"; 
+		cout<<g_ktip; 
 		EdmoveTo(zz_x-_ed_top,zz_y+3);
 		return 0;
 	}
@@ -958,6 +1023,7 @@ int main(){
 	eview::init();
 	srf::init();
 	_ed_code::_edf_nopaste();
+	_ed_code::load_docmap();
 	cout<<"main:init all end\n";
 	/*auto v = srf::py_near("bian");
 	cout<<v.size()<<endl;
