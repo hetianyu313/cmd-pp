@@ -9,6 +9,7 @@
 #include"editorchar.cpp"
 #include"editorstr.cpp"
 #include"editorview.cpp"
+#include"editorlang.cpp"
 #include"editorsrf.cpp"
 using namespace std;
 //-std=c++14 -O2 -s -m32
@@ -60,6 +61,7 @@ namespace _ed_code{
 	};
 	unordered_map<string, vector<string>> docMap;
 	bool fc_zdbq = 1;//当前状态是否允许自动补全,比如 " 中不补全
+	
 	void load_docmap(){
 		string fn = exedir_get()+"setting\\docmap.ini";
 		cout<<"load_docmap:load from "<<fn<<endl;
@@ -86,6 +88,7 @@ namespace _ed_code{
 		bool f_num = 0;
 		char lc = 0;
 		string gjz = "";
+		string last_kw = "";
 		int cnt = 0;
 		if(f_dhzs) g_conc.SetRGBmap(g_view.c_zs);
 		for(char c : s){
@@ -147,50 +150,47 @@ namespace _ed_code{
 				//if(cnt==zz_y&&col==zz_x)fc_zdbq = 0;
 			}
 			if(!f_define && !f_str && !f_zs && !f_dhzs && !f_num){
-				if(mp_c_qh[c]==1||c==' '||cnt==s.size()-1){
-					if(mp_c_hs1[gjz]&&gjz.size()>0){
-						//EdmoveLeft(gjz.size());
-						COORD pos = EdgetPosition();
-						//cerr<<"pos x="<<pos.X<<" y="<<pos.Y<<" sz="<<gjz.size();
-						EdmoveTo(pos.Y,pos.X-gjz.size());
-						g_conc.SetRGBmap(g_view.c_type);
-						for(char c : gjz){
-							putchar(c);
-						}
-						g_conc.SetRGBmap(g_view.c_code);
-					}
-					else if(mp_c_hs2[gjz]&&gjz.size()>0){
-						//EdmoveLeft(gjz.size());
-						COORD pos = EdgetPosition();
-						//cerr<<"pos x="<<pos.X<<" y="<<pos.Y<<" sz="<<gjz.size();
-						EdmoveTo(pos.Y,pos.X-gjz.size());
-						g_conc.SetRGBmap(g_view.c_func);
-						for(char c : gjz){
-							putchar(c);
-						}
-						g_conc.SetRGBmap(g_view.c_code);
-					}
-					if(mp_c_qh[c]){
-						g_conc.SetRGBmap(g_view.c_sign);
-					}
-					gjz = "";
-				}
-				else{
-					g_conc.SetRGBmap(g_view.c_code);
-					gjz+=c;
-				}
-			}
-			if(col==zz_x && !gjz.empty() && docMap.find(gjz) != docMap.end()){
-			    //g_ktip += " doc:" + gjz; // 标记这个词有文档
-			    g_doc = gjz;
-			}
-			lc = c;//last char
-			cnt++;
-			if(!no_putchar_this)putchar(c);
+	            if(mp_c_qh[c]==1||c==' '||cnt==s.size()-1){
+	                if(gjz.size()>0){
+	                    if(mp_c_hs1[gjz]){
+	                        // 类型关键字
+	                        COORD pos = EdgetPosition();
+	                        EdmoveTo(pos.Y,pos.X-gjz.size());
+	                        g_conc.SetRGBmap(g_view.c_type);
+	                        for(char c : gjz) putchar(c);
+	                        g_conc.SetRGBmap(g_view.c_code);
+	                        last_kw = gjz; // <-- 记录
+	                    }
+	                    else if(mp_c_hs2[gjz]){
+	                        // 控制/函数关键字
+	                        COORD pos = EdgetPosition();
+	                        EdmoveTo(pos.Y,pos.X-gjz.size());
+	                        g_conc.SetRGBmap(g_view.c_func);
+	                        for(char c : gjz) putchar(c);
+	                        g_conc.SetRGBmap(g_view.c_code);
+	                        last_kw = gjz; // <-- 记录
+	                    }
+	                }
+	                if(mp_c_qh[c]){
+	                    g_conc.SetRGBmap(g_view.c_sign);
+	                }
+	                gjz = "";
+	            }
+	            else{
+	                g_conc.SetRGBmap(g_view.c_code);
+	                gjz += c;
+	            }
+	        }
+	        lc = c;
+	        cnt++;
+	        if(!no_putchar_this) putchar(c);
 		}
+		if(col == zz_x && !last_kw.empty()){
+	        g_doc = last_kw;
+	    }
 	}
 	const string fl = "																														";
-	
+	//120字符占位 
 	void fillline(int i){
 		COORD coord = {0, (SHORT)i}; // 第 i 行
 		DWORD written;
@@ -202,7 +202,10 @@ namespace _ed_code{
 		//cout<<fl;
 	}
 	void _edf_doc_display(const string& key){
-	    if(docMap.find(key) == docMap.end()) return;
+	    if(docMap.find(key) == docMap.end()){
+	    	g_doc.clear();
+	    	return;
+		}
 	    //EdmoveTo(_ed_line+6, 0); 
 	    //g_conc.SetRGBmap(120);
 	    //cout<<string(_ed_width, ' ')<<endl;
@@ -219,11 +222,51 @@ namespace _ed_code{
 	    }
 	    g_conc.SetRGBmap(15);
 	}
+	vector<string> fileList;
+    int fileSel = 0;
+    void load_file_list(const string& dir){
+        fileList.clear();
+        WIN32_FIND_DATA ffd;
+        HANDLE hFind = FindFirstFile((dir + "\\*").c_str(), &ffd);
+        if(hFind == INVALID_HANDLE_VALUE) return;
+        do {
+            if(!(ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+                fileList.push_back(ffd.cFileName);
+            }
+        } while(FindNextFile(hFind, &ffd));
+        FindClose(hFind);
+    }
+    void _ed_draw_filetree(){
+        int startX = _ed_width - 30;
+        g_conc.SetRGBmap(128);
+        for(int i=0;i<_ed_line;i++){
+            EdmoveTo(i, startX);
+            cout << string(30,' ');
+        }
+        EdmoveTo(0, startX);
+        g_conc.SetRGBmap(143);
+        cout << " FILES ";
+        g_conc.SetRGBmap(15);
+        int maxShow = _ed_line-2;
+        for(int i=0;i<fileList.size() && i<maxShow;i++){
+            EdmoveTo(i+1, startX);
+            if(i==fileSel){
+                g_conc.SetRGBmap(112);
+            }else{
+                g_conc.SetRGBmap(15);
+            }
+            string name = fileList[i];
+            if(name.size()>28) name = name.substr(0,27)+"~";
+            cout << " " << setw(28) << left << name;
+        }
+        g_conc.SetRGBmap(15);
+    }
 	void _ed_flash(){
 		//system("cls");
 		EdmoveTo(0,0);
 		bool f_dhzs = 0;
 		fc_zdbq = 1;
+		g_doc.clear();
 		HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 		for(int i = 0;i<=_ed_line;i++){
 			int cl = i+_ed_top;
@@ -242,13 +285,15 @@ namespace _ed_code{
 			printf("%-3d",cl);
 			g_conc.SetRGBmap(g_view.c_code);
 			//cout<<v[cl]<<endl;
-			_ed_outcol(v[cl],f_dhzs,i==zz_x?i:-1);
+			_ed_outcol(AnsiToUtf8(v[cl]),f_dhzs,cl==zz_x?cl:-1);
+			//_ed_outcol(v[cl],f_dhzs,i==zz_x?i:-1);
 		}
 		// 在最底部，根据最新关键字弹帮助
 		if(g_doc!=""){
 		    //string key = g_ktip.substr(g_ktip.find("doc:")+4);
 		    _edf_doc_display(g_doc);
 		}
+		//_ed_draw_filetree(); //文件树 
 	}
 	void _edf_up(){
 		if(zz_x > 0){  // 确保不是第一行
@@ -286,28 +331,9 @@ namespace _ed_code{
 			zz_y++;
 		}
 	}
-	/*void _edf_enter(){
-		string s = v[zz_x].substr(zz_y);
-		v[zz_x].erase(v[zz_x].begin()+zz_y,v[zz_x].end());
-		v.insert(v.begin()+zz_x+1,(string)s);
-		zz_x++;
-		zz_y = 0; 
-		if(zz_x>_ed_top+_ed_line) _ed_top = zz_x-_ed_line;
-	}*/
 	bool gf_atsj = 1;
 	int get_indent_level(int line) {
 	    int res = 0;
-	    /*for (int i = 0; i < line; i++) {
-	        string s = v[i];
-	        // ??????/Tab
-	        if(!s.empty())
-	            s.erase(s.find_last_not_of(" \t") + 1);
-	
-	        for (char c : s) {
-	            if (c == '{') level++;
-	            if (c == '}') level = max(0, level - 1);
-	        }
-	    }*/
 	    if(line==0) return 0;
 	    string s = v[line-1];
 	    for(char c : s){
@@ -371,31 +397,6 @@ namespace _ed_code{
 	        v[zz_x].insert(v[zz_x].begin()+zz_y,c); zz_y++;
 	    }
 	}
-	/*void _edf_back(bool ntp = 0) {
-		// 安全校验
-		if(v.empty() || zz_x >= v.size()) return;
-		// 情况1：当前行有字符可删除（普通退格）
-		if(zz_y > 0) {
-			char c = v[zz_x][zz_y-1];
-			v[zz_x].erase(zz_y-1, 1);  // 删除前一个字符
-			zz_y--;
-			if(!(c>=32&&c<=127) && ntp==0) _edf_back(1);
-		}
-		// 情况2：行首且不是第一行（跨行退格）
-		else if(zz_x > 0) {
-			int prev_len = v[zz_x-1].size();  // 保存上一行长度
-			v[zz_x-1] += v[zz_x];	  // 合并两行内容
-			v.erase(v.begin()+zz_x);	// 删除当前行
-			// 更新光标位置
-			zz_x--;
-			zz_y = prev_len;
-			// 视口调整逻辑
-			if(zz_x < _ed_top) {
-				_ed_top = max(0, zz_x - _ed_line/2);  // 保持光标在视口中央
-			}
-		}
-		// 情况3：第一行行首（无操作）
-	}*/
 	// 窗口过程钩子
 	LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 		if (msg == WM_CONTEXTMENU) {
@@ -466,6 +467,7 @@ namespace _ed_code{
 			_ed_top--;
 			zz_x--;
 			// 光标位置校正（更安全的写法）
+			if(zz_y>v[zz_x].size()) zz_y = v[zz_x].size();
 		}
 	}
 	void _edf_pgdn() {
@@ -473,6 +475,7 @@ namespace _ed_code{
 			_ed_top++;
 			zz_x++;
 			// 光标位置校正（包含边界检查）
+			if(zz_y>v[zz_x].size()) zz_y = v[zz_x].size();
 		}
 	}
 	void _edf_insert(){
@@ -480,7 +483,7 @@ namespace _ed_code{
 		clearInputBuffer();
 		char c;
 		EdmoveTo(0,0);g_conc.SetRGBmap(135);
-		cout<<"Input your code now,end with ESCAPE\n";
+		cout<<lan_str(222)<<"\n";
 		string s = "";
 		int cnt = 0;
 		while(1){
@@ -516,14 +519,14 @@ namespace _ed_code{
 		EdmoveTo(0,0);g_conc.SetRGBmap(135);
 		string fn = _ed_cpp::_ed_in_f;
 		if(fn==""){
-			cout<<"Input your file path\n";
+			cout<<lan_str(223)<<"\n";
 			clearInputBuffer();
 			getline(cin,fn);
 		}
 		else{
 			fn = fn.substr(0,fn.find_last_of("."))+".cpp";
 		}
-		cout<<"file path:"<<fn<<endl;
+		cout<<lan_str(224)<<":"<<fn<<endl;
 		ofstream ofs(fn.c_str());
 		_ed_cpp::_ed_in_f = fn;//自动设置 
 		for(int i = 0;i<(int)v.size();i++){
@@ -531,15 +534,17 @@ namespace _ed_code{
 			if(i!=v.size()-1) ofs<<"\n";
 		}
 		ofs.close();
-		cout<<"file saved successfully\n";
-		system("pause");
+		//file saved successfully
+		cout<<lan_str(225)<<endl;
+		runHooks("onSave", fn);
+		edt_pause();
 	}
 	// 将文件每行内容读取到vector<string>
 	vector<string> readFileToVector(const string& filename) {
 		vector<string> lines;
 		ifstream file(filename);
 		if (!file.is_open()) {
-			cerr << "Error opening file: " << filename << endl;
+			cerr << lan_str(226)<< filename << endl;
 			return lines;
 		}
 		string line;
@@ -554,7 +559,7 @@ namespace _ed_code{
 		clearInputBuffer();
 		char c;
 		EdmoveTo(0,0);g_conc.SetRGBmap(135);
-		cout<<"Input your file path\n";
+		cout<<lan_str(223)<<"\n";
 		string fn;
 		getline(cin,fn);
 		_ed_cpp::_ed_in_f = fn;//自动设置 
@@ -563,51 +568,52 @@ namespace _ed_code{
 		zz_x = 0;
 		zz_y = 0;
 		_ed_top = 0;
-		system("pause");
+		edt_pause();
 	}
 	void _edf_about(){
 		system("cls");
 		clearInputBuffer();
 		cout<<"CMD++\nby HeTianYu313 (Github.com)\nLanguage:C++(MinGW64)\n";
-		system("pause");
+		edt_pause();
 	}
 	void _edf_obfus(){
 		system("cls");
 		clearInputBuffer();
 		EdmoveTo(0,0);
 		g_conc.SetRGBmap(135);
-		cout<<"Input obfuscated code path:\n";
+		cout<<lan_str(223)<<"\n";
 		string fn;
 		getline(cin,fn);
 		g_conc.SetRGBmap(78);
 		cout<<"警告:代码混淆功能不推荐使用,产生后果自负!\n";
-		cout<<"	 这是最后一次提醒,你可以关闭窗口	 \n";
+		cout<<"	    这是最后一次提醒,你可以关闭窗口	    \n";
 		g_conc.SetRGBmap(135);
-		system("pause");
-		string cmd = "\""+_ed_cpp::exedir+"tool\\CodeObfuscator.exe\" \""+_ed_cpp::_ed_in_f+"\" \""+fn+"\"";
-		cout<<"命令:"<<cmd<<endl;
+		edt_pause();
+		string cmd = "\""+exedir+"tool\\CodeObfuscator.exe\" \""+_ed_cpp::_ed_in_f+"\" \""+fn+"\"";
+		cout<<lan_str(227)<<cmd<<endl;
 		int r = _ed_cpp::runProcess(cmd.c_str());
-		cout<<"执行结果:"<<r<<endl;
-		system("pause");
+		cout<<lan_str(228)<<r<<endl;//result after running
+		edt_pause();
 	}
 	void _edf_cstyle(){
 		system("cls");
 		clearInputBuffer();
 		EdmoveTo(0,0);
 		g_conc.SetRGBmap(135);
-		cout<<"Input styled code path:\n";
+		//code path
+		cout<<lan_str(223)<<endl;
 		string fn;
 		getline(cin,fn);
 		g_conc.SetRGBmap(78);
 		cout<<"警告:代码整理功能不推荐使用,产生后果自负!\n";
 		cout<<"	 这是最后一次提醒,你可以关闭窗口	 \n";
 		g_conc.SetRGBmap(135);
-		system("pause");
-		string cmd = "\""+_ed_cpp::exedir+"tool\\cpp_code_nai.exe\" \""+_ed_cpp::_ed_in_f+"\" \""+fn+"\"";
-		cout<<"命令:"<<cmd<<endl;
+		edt_pause();
+		string cmd = "\""+exedir+"tool\\cpp_code_nai.exe\" \""+_ed_cpp::_ed_in_f+"\" \""+fn+"\"";
+		cout<<lan_str(227)<<cmd<<endl;
 		int r = _ed_cpp::runProcess(cmd.c_str());
-		cout<<"执行结果:"<<r<<endl;
-		system("pause");
+		cout<<lan_str(228)<<r<<endl;
+		edt_pause();
 	}
 	void _edf_curto(){
 		system("cls");
@@ -629,8 +635,9 @@ namespace _ed_code{
 		clearInputBuffer();
 		EdmoveTo(0,0);
 		g_conc.SetRGBmap(135);
-		cout<<"将文件复制到剪切板\n";
-		cout<<"0.ansi 1.utf8 2.utf16\n";
+		//将文件复制到剪切板
+		cout<<lan_str(221);
+		cout<<"\n0.ansi 1.utf8 2.utf16\n";
 		int ec = 0;
 		cin>>ec;
 		string s = "";
@@ -650,8 +657,9 @@ namespace _ed_code{
 			wstring u = AnsiToUtf16(s);
 			jq.setTextW(u.c_str());
 		}
-		cout<<"已复制到剪切板\n";
-		system("pause");
+		//已复制到剪切板
+		cout<<lan_str(220)<<"\n";
+		edt_pause();
 	}
 	// 记录上一次查找内容和光标位置
 	string _last_find = "";
@@ -663,13 +671,15 @@ namespace _ed_code{
 		clearInputBuffer();
 		EdmoveTo(0,0); g_conc.SetRGBmap(135);
 	
-		cout << "Find text内容:" << endl;
+		//内容
+		cout<<lan_str(208)<<endl;
 		string keyword;
 		getline(cin, keyword);
 	
 		if(keyword.empty()) {
-			cout << "Empty input, cancelled.\n";
-			system("pause");
+			//Empty input
+			cout<<lan_str(219)<<endl;
+			edt_pause();
 			return;
 		}
 	
@@ -700,24 +710,22 @@ namespace _ed_code{
 			Sleep(200);
 		} else {
 			cout << "Not found: " << keyword << endl;
-			system("pause");
+			edt_pause();
 		}
-		//system("pause");
+		//edt_pause();
 	}
 	// 查找下一个（基于上一次关键字/位置）
 	void _edf_find_next() {
 		if(_last_find.empty()) {
 			system("cls");
-			cout << "No previous search. Use find first.\n";
-			system("pause");
+			cout <<lan_str(215)<< "\n";//No previous search. Use find first.
+			edt_pause();
 			//cout<<"_last_find empty,user input\n";
 			//_edf_find();
 			return;
 		}
-	
 		bool found = false;
 		int fx = -1, fy = -1;
-	
 		// 从当前位置继续往后查找
 		for(size_t i = _last_x; i < v.size(); i++) {
 			size_t startPos = (i == _last_x ? _last_y + 1 : 0);
@@ -729,7 +737,6 @@ namespace _ed_code{
 				break;
 			}
 		}
-	
 		if(found) {
 			zz_x = fx; zz_y = fy;
 			if(zz_x < _ed_top) {
@@ -740,13 +747,15 @@ namespace _ed_code{
 			_last_x = zz_x;
 			_last_y = zz_y;
 			system("cls");
-			cout << "Next found at line " << fx << " col " << fy << endl;
+			//Next found at line
+			cout<<lan_str(218)<<fx<<lan_str(216)<<fy<<lan_str(217)<<fx<<endl;
 		} else {
 			system("cls");
-			cout << "No more matches of \"" << _last_find << "\"\n";
-			system("pause");
+			//No more matches
+			cout<<lan_str(209)<<"\n";
+			edt_pause();
 		}
-		//system("pause");
+		//edt_pause();
 		Sleep(200);
 	}
 	// 替换（一个或全部）
@@ -754,23 +763,20 @@ namespace _ed_code{
 		system("cls");
 		clearInputBuffer();
 		EdmoveTo(0,0); g_conc.SetRGBmap(135);
-	
 		string from, to;
-		cout << "Replace what从? ";
+		cout << lan_str(208);
 		getline(cin, from);
 		if(from.empty()) {
-			cout << "Empty search, cancelled.\n";
-			system("pause");
+			cout <<lan_str(209) <<"\n";
+			edt_pause();
 			return;
 		}
-		cout << "Replace with替换到? ";
+		cout << lan_str(207);
 		getline(cin, to);
-	
-		cout << "Replace mode: \n1. Replace first occurrence替换第一个\n2. Replace all替换全部\n";
+		//换一个   换全部";
+		cout<<lan_str(210)<<"\n"<<lan_str(211)<<"\n"<<lan_str(212)<<"\n";
 		char c = _getch();
-	
 		int cnt = 0;
-	
 		if(c == '1') {
 			bool done = false;
 			for(size_t i = 0; i < v.size() && !done; i++) {
@@ -798,17 +804,16 @@ namespace _ed_code{
 				}
 			}
 		}
-	
-		cout << "Replaced " << cnt << " occurrences.\n";
-		system("pause");
+		cout <<lan_str(213)<< cnt <<lan_str(214)<< "\n";
+		edt_pause();
 	}
 	void _edf_escape(){
 		system("cls");
 		EdmoveTo(0,0);g_conc.SetRGBmap(135);
-		cout<<"选择完成后如果没有反应按一次回车,部分功能需要保存后使用\n";
+		cout<<lan_str(206)<<"\n";
 		cout<<"0.back\n1.insert\n2.exit cmd++\n3.save file\n4.load file\n5.complete\n6.complete and run\n7.about\n";
 		cout<<"8.obfuscate code\n9.move cursor\na.copy to clipboard\nb.set view of IDE\n";
-		cout<<"c.code style\nd.find first\ne.find\nf.replace\n";
+		cout<<"c.code style\nd.find first\ne.find\nf.replace\ng.set language of IDE\n";
 		int c = _getch();
 		switch (c){
 			case '0':return;break;
@@ -827,6 +832,7 @@ namespace _ed_code{
 			case 'd':_edf_find();break;
 			case 'e':_edf_find_next();break;
 			case 'f':_edf_replace();break;
+			case 'g':elang::_el_main();break;
 		}
 		g_conc.SetRGBmap(15);
 		system("cls");
@@ -838,7 +844,7 @@ namespace _ed_code{
 		fillline(_ed_line+3);
 		fillline(_ed_line+4);
 		//fillline(_ed_line+5);
-		g_ktip = "home:上一页 end:下一页 escape:退出中文输入 0~9:选择 a-z:拼音输入 A-Z:直接输入";
+		g_ktip = lan_str(201);//"home:上一页 end:下一页 escape:退出中文输入 0~9:选择 a-z:拼音输入 A-Z:直接输入";
 		EdmoveTo(_ed_line+1,0);
 		cout<<fl<<endl<<fl<<endl;
 		EdmoveTo(_ed_line+1,0);
@@ -848,13 +854,13 @@ namespace _ed_code{
 		EdmoveTo(_ed_line+3,0);
 		cout<<fl<<"\n"<<fl<<"\n"<<fl;
 		EdmoveTo(_ed_line+3,0);
-		string s = "中文:";
+		string s = Utf8ToAnsi(lan_str(205));
 		for(int i = 0;i<10;i++){
 			int l = p*10+i;
 			if(l<v.size())s+=to_string(((i+1)%10))+"."+v[l].hz+" ";
 		}
-		cout<<s<<"\n"<<"页码:"<<p<<"/"<<v.size()/10<<"(候选:"<<v.size()<<")";
-		cout<<"输入:"<<ci;
+		cout<<AnsiToUtf8(s)<<"\n"<<lan_str(202)<<p<<"/"<<v.size()/10<<"("<<lan_str(203)<<v.size()<<")";
+		cout<<lan_str(204)<<ci;
 		EdmoveTo(zz_x-_ed_top,zz_y+3);
 	}
 	void _edf_zhcn(){
@@ -892,9 +898,7 @@ namespace _ed_code{
 						case 77: _edf_right();_ed_flash(); break; // VK_RIGHT
 						default: c = 32;
 					}
-				}
-				//if(page>(vp.size()-1)/10) page = ((int)vp.size()-1)/10;
-				//if(page<=0) page=0;	
+				}	
 			}
 			else if(c==13){
 				if(vp.size()>0){ 
@@ -942,9 +946,6 @@ namespace _ed_code{
 		}
 		system("cls");
 		_ed_flash();
-		/*for(char i : str){//add string to code
-			_edf_addch(i);
-		}*/
 	}
 	void _edf_flash1(){
 		system("cls");
@@ -968,10 +969,48 @@ namespace _ed_code{
 			v[i] = t;
 		}
 	}
+	string fldir = "C:\\Users\\A\\Desktop";
+	string getCurrentToken(){
+	    if(zz_x < 0 || zz_x >= v.size()) return "";
+	    string &line = v[zz_x];
+	    if(zz_y > line.size()) return "";
+	    int start = zz_y - 1;
+	    while(start >= 0 && (isalnum(line[start]) || line[start]=='_')){
+	        start--;
+	    }
+	    start++;
+	    return line.substr(start, zz_y - start);
+	}
+	string findCompletion(const string& prefix){
+	    if(prefix.empty()) return "";
+	    for(auto &kv : mp_c_hs1){
+	        if(kv.first.rfind(prefix, 0) == 0){ // ????
+	            return kv.first;
+	        }
+	    }
+	    for(auto &kv : mp_c_hs2){
+	        if(kv.first.rfind(prefix, 0) == 0){
+	            return kv.first;
+	        }
+	    }
+	    return "";
+	}
+	void doCompletion(){
+	    string token = getCurrentToken();
+	    string comp = findCompletion(token);
+	    if(comp.empty() || comp == token) return;
+	
+	    string &line = v[zz_x];
+	    int start = zz_y - token.size();
+	    if(start < 0) start = 0;
+	    line.erase(start, token.size());
+	    line.insert(start, comp);
+	    zz_y = start + comp.size();
+	}
 	int _ed_run(){ 
 		int c = _getch(); 
 		//cout<<c<<endl;
-		g_ktip = "esc:菜单 f1:插入 f2:输入中文 f3:刷新(可修复bug)";
+		g_ktip = lan_str(200);//"esc:菜单 f1:插入 f2:输入中文 f3:刷新(可修复bug) f4:补全";
 		if(zz_x<0||zz_x>v.size()){
 			zz_x = _ed_top;
 		}
@@ -991,6 +1030,7 @@ namespace _ed_code{
 					case 0x3b: _edf_insert(); break;  // f1
 					case 0x3c: _edf_zhcn(); break;  // f2
 					case 0x3d: _edf_flash1(); break;  // f3
+					case 0x3e: doCompletion();break; //f4
 				}
 			}
 			else {
@@ -1004,12 +1044,12 @@ namespace _ed_code{
 		}
 		_ed_flash();
 		g_conc.SetRGBmap(8);
-		EdmoveTo(_ed_line+1,0);
-		cout<<fl<<endl<<fl<<endl;
+	    fillline(_ed_line+1);
+	    fillline(_ed_line+2);
 		EdmoveTo(_ed_line+1,0);
 		g_conc.SetRGBmap(8);
 		printf("_ed_run zz:%d,%d top:%d line:%d vs:%d\n",zz_x,zz_y,_ed_top,_ed_line,v.size());
-		cout<<g_ktip; 
+		cout<<g_ktip<<" doc:"<<g_doc;
 		EdmoveTo(zz_x-_ed_top,zz_y+3);
 		return 0;
 	}
@@ -1017,6 +1057,7 @@ namespace _ed_code{
 int main(){
 	cout<<"main:start console c++ ide\n";
 	SetConsoleTitle("Console C++ IDE");
+	SetConsoleOutputCP(CP_UTF8);
 	_ed_code::init();
 	_ed_cpp::init();
 	cwh::init();
@@ -1024,12 +1065,17 @@ int main(){
 	srf::init();
 	_ed_code::_edf_nopaste();
 	_ed_code::load_docmap();
+	load_hooks();
+	elang::init();
+	//_ed_code::load_file_list(_ed_code::fldir);
 	cout<<"main:init all end\n";
 	/*auto v = srf::py_near("bian");
 	cout<<v.size()<<endl;
 	for(auto i : v){
 		cout<<i.hz<<" "<<i.py<<endl;
 	}*/
+	cout<<"[lang] name="<<lan_str(100)<<" / "<<lan_str(101)<<endl;
+	edt_pause();
 	system("cls");
 	/*string s;
 	vector<pair<string, int>> v = {{"T1",0},{"T2",1},{"T3",2},{"T4",3},{"T5",4},{"T6",5},

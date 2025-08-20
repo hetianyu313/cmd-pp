@@ -28,7 +28,7 @@ _ed_view g_view = {
 	"Dev-C++ 5.11"
 };//builtin view
 string exedir_get(){
-	return _ed_cpp::exedir;
+	return exedir;
 }
 namespace eview{
 	std::vector<std::string> GetFilesWithExtension(const std::string& folderPath, const std::string& extension) {
@@ -52,7 +52,7 @@ namespace eview{
 	}
 	string _ev_getmrview(){
 		string fn = exedir_get()+"setting\\view_mr.ini";
-		cout<<"加载路径:"<<fn<<endl;
+		cout<<"load from:"<<fn<<endl;
 		ifstream ifs(fn.c_str());
 		string s;
 		getline(ifs,s);
@@ -62,7 +62,7 @@ namespace eview{
 	}
 	void _ev_setmrview(string s){
 		string fn = exedir_get()+"setting\\view_mr.ini";
-		cout<<"加载路径:"<<fn<<endl;
+		cout<<"load from:"<<fn<<endl;
 		ofstream ofs(fn.c_str());
 		ofs.clear();
 		ofs<<s;
@@ -72,7 +72,7 @@ namespace eview{
 	}
 	void _ev_loadview(string s){
 		string fn = exedir_get()+"setting\\"+s+".view";
-		cout<<"加载路径:"<<fn<<endl;
+		cout<<"load from:"<<fn<<endl;
 		ifstream ifs(fn.c_str());
 		ifs>>g_view.c_func>>
 		g_view.c_type>>
@@ -105,19 +105,19 @@ namespace eview{
 		EdmoveTo(0,0);g_conc.SetRGBmap(135);
 		string s = "";
 		while(1){
-			cout<<"IDE显示菜单\n0.退出\n1.设置主题\n2.help\n3.当前主题\n";
+			cout<<lan_str(400)<<"\n0.退出\n1.设置主题\n2.help\n3.当前主题\n";
 			cin>>s;
 			if(s=="0"){
 				cout<<"_ev_main:return to codemain\n";
 				return ;
 			}
 			else if(s=="1"){
-				cout<<"所有主题都存放在setting中,默认主题为builtin\n请输入主题名称\n";
+				cout<<lan_str(401)<<"\n";
 				vector<string> v = GetFilesWithExtension((exedir_get()+"setting"),".view");
 				for(string i : v){
 					cout<<" - "<<i<<endl;
 				}
-				cout<<"名称,不要有后缀名:";
+				cout<<lan_str(405)<<":";
 				string t = "";
 				//cin>>t;
 				clearInputBuffer();
@@ -127,11 +127,11 @@ namespace eview{
 				init();
 			}
 			else if(s=="2"){
-				cout<<"所有主题都存放在setting中,默认主题为Classic Plus Dark\n";
-				cout<<"当前主题存放在view_mr.ini\n";
+				cout<<lan_str(402)<<"\n";
+				cout<<lan_str(403)<<"\n";
 			}
 			else if(s=="3"){
-				cout<<"当前主题\n";
+				cout<<lan_str(404)<<"\n";
 				cout<<"name:"<<g_view.v_name<<endl;
 				cout<<"auth:"<<g_view.v_auth<<endl;
 				cout<<"about:"<<g_view.v_about<<endl;

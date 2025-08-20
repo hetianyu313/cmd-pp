@@ -13,7 +13,6 @@ namespace _ed_cpp{
 	string _ed_yh = "-std=c++14 -O2 -s";
 	string _ed_include = "";
 	string _ed_yh2 = "-static-libgcc";
-	string exedir;
 	void getexedir(){
 		char path[MAX_PATH];
 	    DWORD len = GetModuleFileName(NULL, path, MAX_PATH);
@@ -106,33 +105,35 @@ namespace _ed_cpp{
 		system("cls");
 		clearInputBuffer();
 		EdmoveTo(0,0);g_conc.SetRGBmap(135);
-		cout<<"C++源文件编译与运行\n";
+		cout<<lan_str(301)<<"\n";
 		unsigned int ts = GetTickCount();
 		string in=_ed_in_f,out;
 		//cin>>out;
 		out = in.substr(0,in.find_last_of("."))+".exe";
-		cout<<"C++编译器:"<<_ed_gpp_path<<endl;
-		cout<<"输出文件名:"<<out<<"\n";
+		cout<<lan_str(302)<<":"<<_ed_gpp_path<<endl;
+		cout<<lan_str(223)<<":"<<out<<"\n";
 		/*cmd = "cd \""+_ed_gpp_path.substr(0,_ed_gpp_path.find_last_of("\\"))+"\"";
 		cout<<"命令:"<<cmd<<endl;
 		system(cmd.c_str());*/
 		string cmd = _gen_cmd(_ed_gpp_path,in,out,_ed_yh,_ed_include,_ed_yh2);
 		//replace(cmd.begin(), cmd.end(), '\\', '/');
-		cout<<"命令:"<<cmd<<endl;
-		cout<<"开始编译\n";
+		cout<<lan_str(227)<<cmd<<endl;
+		runHooks("beforeRun",_ed_in_f);
+		cout<<lan_str(304)<<lan_str(303)<<"\n";
 		runProcess(cmd);
-		cout<<"停止编译\n";
+		cout<<lan_str(305)<<lan_str(303)<<"\n";
 		unsigned int es = GetTickCount();
 		unsigned int dt = es - ts;
-		cout<<"编译时间:"<<dt<<"ms\n";
+		cout<<lan_str(303)<<lan_str(307)<<":"<<dt<<"ms\n";
 		if(run){
-			cout<<"开始运行\n";
+			cout<<lan_str(304)<<lan_str(306)<<"\n";
 			cmd = "\""+exedir+"tool\\ConsolePauser.exe\" \""+out+"\"";
-			cout<<"命令:"<<cmd<<endl;
+			cout<<lan_str(227)<<cmd<<endl;
 			runProcess1(cmd);
 			//system(cmd.c_str());
+			runHooks("onRun",_ed_in_f);
 		}
-		system("pause");
+		edt_pause();
 	}
 }
 /*int main(){
@@ -143,5 +144,5 @@ namespace _ed_cpp{
 	cout<<s<<endl;
 	//system(s.c_str());
 	_ed_cpp::runProcess(s);
-	system("pause");
+	edt_pause();
 }*/

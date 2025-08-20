@@ -1,0 +1,58 @@
+#   de lang file
+#  lang info
+100=Deutsch
+101=de
+102=__builtin__
+#  _ed_code func lang
+200=esc-Menü f1=Einfügen f2=Eingabe Chinesisch f3=Aktualisieren f4=Vervollständigen
+201=Home=Seite zurück End=Seite vorwärts Esc=Eingabe beenden 0-9=Auswahl a-z=Pinyin-Eingabe A-Z=Direkte Eingabe
+202=Seite:
+203=Kandidaten:
+204=Eingabe:
+205=Chinesisch:
+206=Wenn nach der Auswahl keine Reaktion erfolgt, bitte einmal Enter drücken. Einige Funktionen erfordern Speichern.
+207=Ersetzen durch:
+208=Suche:
+209=Nichts gefunden
+210=Ersetzen-Modus
+211=Erstes ersetzen
+212=Alle ersetzen
+213=Ersetzt
+214=Objekte
+215=Bitte zuerst eins finden
+216=Zeile
+217=Spalte
+218=Das nächste Vorkommen bei
+219=Eingabe ist leer
+220=In die Zwischenablage kopiert
+221=Datei in Zwischenablage kopiert
+222=Geben Sie Code ein, mit Esc beenden
+223=Dateiname eingeben
+224=Dateiname
+225=Datei erfolgreich gespeichert
+226=Dateifehler beim Öffnen:
+227=Befehl:
+228=Ausgabe:
+#  other lang
+300=Bitte beliebige Taste drücken...
+301=C++ Quelldatei kompilieren und ausführen
+302=C++ Compiler
+303=Kompilieren
+304=Start
+305=Stopp
+306=Ausführen
+307=Zeit
+#  _EDTV lang
+400=IDE Anzeigemenü
+401=Bitte geben Sie den Theme-Namen ein
+402=Alle Themes befinden sich im Ordner setting, Standard-Theme ist Classic Plus Dark
+403=Aktuelles Theme befindet sich in view_mr.ini
+404=Aktuelles Theme
+405=Name, keine Dateiendung
+#  _EDLG lang
+400=IDE Sprachmenü
+401=Bitte geben Sie den Sprach-Namen ein
+402=Alle Sprachen befinden sich im Ordner setting, Standardsprache ist zh-cn
+403=Aktuelle Sprache befindet sich in lang_mr.ini
+404=Aktuelle Sprache
+405=Name, keine Dateiendung

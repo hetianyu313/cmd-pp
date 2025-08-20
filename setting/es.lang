@@ -1,0 +1,35 @@
+#   es lang file
+#  lang info
+100=Español
+101=es
+102=__builtin__
+#  _ed_code func lang
+200=esc menú f1 insertar f2 introducir chino f3 actualizar f4 autocompletar
+201=home página anterior end página siguiente esc salir de entrada 0-9 seleccionar a-z entrada pinyin A-Z entrada directa
+202=Página:
+203=Candidatos:
+204=Entrada:
+205=Chino:
+206=Si no hay reacción después de seleccionar, presione Enter; algunas funciones requieren guardar antes de usarse
+207=Reemplazar con:
+208=Buscar:
+209=No encontrado
+210=Modo de reemplazo
+211=Reemplazar primero
+212=Reemplazar todo
+213=Reemplazado
+214=ítems
+215=Por favor busque el primero primero
+216=Línea
+217=Columna
+218=La siguiente coincidencia en
+219=La entrada está vacía
+220=Copiado al portapapeles
+221=Archivo copiado al portapapeles
+222=Introduzca código, presione esc para salir
+223=Introduzca nombre de archivo
+224=Nombre de archivo
+225=Archivo guardado con éxito
+226=Error al abrir archivo:
+227=Comando:
+228=Resultado de ejecución:

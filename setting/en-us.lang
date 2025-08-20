@@ -1,0 +1,51 @@
+#   en-us lang file
+#  lang info
+100=English-US
+101=en-us
+102=__builtin__
+#  _ed_code func lang
+200=esc menu f1 insert f2 input Chinese f3 refresh f4 autocomplete
+201=home previous page end next page esc exit input 0-9 select a-z pinyin input A-Z direct input
+202=Page:
+203=Candidates:
+204=Input:
+205=Chinese:
+206=If there is no response after selection, press Enter once. Some functions require saving before using
+207=Replace with:
+208=Search:
+209=Not found
+210=Replace mode
+211=Replace first
+212=Replace all
+213=Replaced
+214=items
+215=Please find the first one first
+216=Line
+217=Column
+218=Next match at
+219=Input is empty
+220=Copied to clipboard
+221=File copied to clipboard
+222=Enter code, press esc to exit
+223=Enter file name
+224=File name
+225=File saved successfully
+226=File open error:
+227=Command:
+228=Execution result:
+#  other lang
+300=Press any key to continue...
+301=C++ source file compile and run
+302=C++ compiler
+303=Compile
+304=Start
+305=Stop
+306=Run
+307=Time
+#  _EDTV lang
+400=IDE display menu
+401=Please enter the theme name
+402=All themes are stored in setting, default theme is Classic Plus Dark
+403=Current theme stored in view_mr.ini
+404=Current theme
+405=Name, do not include file extension

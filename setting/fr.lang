@@ -1,0 +1,35 @@
+#   fr lang file
+#  lang info
+100=Français
+101=fr
+102=__builtin__
+#  _ed_code func lang
+200=esc menu f1 insérer f2 saisie en chinois f3 actualiser f4 compléter
+201=home page précédente end page suivante esc quitter la saisie 0-9 choisir a-z pinyin A-Z saisie directe
+202=Page :
+203=Candidats :
+204=Entrée :
+205=Chinois :
+206=Si aucune réaction après la sélection, appuyez sur Entrée, certaines fonctions nécessitent un enregistrement préalable
+207=Remplacer par :
+208=Rechercher :
+209=Aucun résultat trouvé
+210=Mode de remplacement
+211=Remplacer le premier
+212=Remplacer tout
+213=Remplacé
+214=éléments
+215=Veuillez d’abord rechercher le premier
+216=Ligne
+217=Colonne
+218=Prochaine correspondance à
+219=Entrée vide
+220=Copié dans le presse-papier
+221=Fichier copié dans le presse-papier
+222=Entrer le code, appuyez sur esc pour quitter
+223=Entrer le nom du fichier
+224=Nom du fichier
+225=Fichier enregistré avec succès
+226=Erreur d’ouverture du fichier :
+227=Commande :
+228=Résultat d’exécution :

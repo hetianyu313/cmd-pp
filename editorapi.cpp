@@ -7,6 +7,81 @@ using namespace std;
 #ifndef EDITORAPI_INC
 #define EDITORAPI_INC
 HANDLE hConsole;
+string exedir;
+struct Hook {
+    string event;    // onSave, onRun
+    string command;  //"python myplugin.py"
+};
+vector<Hook> hooks;
+unordered_map<int, string> langMap;
+//string currentLang = "zh-cn"; //ƒ¨»œ”Ô—‘
+string lan_str(int num){
+    if(langMap.find(num)!=langMap.end()){
+        return langMap[num];
+    }
+    return "[missing:"+to_string(num)+"]";
+}
+void edt_pause(){
+	cout<<lan_str(300);
+	char c = _getch();
+}
+string lan_cstr(int num){
+    return lan_cstr(num).c_str();
+}
+void load_language(const string& langCode){
+    langMap.clear();
+    //currentLang = langCode;
+    string fn = exedir+"setting\\"+langCode+".lang";
+    ifstream ifs(fn);
+    if(!ifs.is_open()){
+        cerr<<"[lang] cannot open "<<fn<<endl;
+        return;
+    }
+    string line;
+    while(getline(ifs, line)){
+        if(line.empty() || line[0]=='#') continue;
+        size_t pos = line.find('=');
+        if(pos == string::npos) continue;
+
+        int id = stoi(line.substr(0, pos));
+        string text = line.substr(pos+1);
+        langMap[id] = text;
+    }
+    cout<<"[lang] loaded "<<langMap.size()<<" entries from "<<fn<<endl;
+}
+void load_hooks() {
+    hooks.clear();
+    string fn = exedir + "setting\\plugins.ini";
+    ifstream ifs(fn);
+    if(!ifs.is_open()){
+        cout << "no plugins.ini, skip" << endl;
+        return;
+    }
+    string line;
+    while(getline(ifs,line)){
+        if(line.empty() || line[0]=='#') continue;// ignore comment
+        // ??: event=command
+        auto pos = line.find('=');
+        if(pos==string::npos) continue;
+        Hook h;
+        h.event = line.substr(0,pos);
+        h.command = line.substr(pos+1);
+        hooks.push_back(h);
+    }
+    cout<<"Loaded "<<hooks.size()<<" hooks"<<endl;
+}
+void runHooks(const string& event, const string& fname){
+    for(auto &h : hooks){
+        if(h.event == event){
+        	if(h.command==""){
+        		cout<<"[Hook] No hook at "<<event<<endl;
+			}
+            string cmd = h.command + " \"" + fname + "\"";
+            cout << "[Hook] "<<event<<" -> "<<cmd<<endl;
+            system(cmd.c_str());
+        }
+    }
+}
 //init
 EDITOR void Edinit(){
 	hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
