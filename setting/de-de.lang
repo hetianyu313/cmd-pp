@@ -1,0 +1,63 @@
+#   de-de lang file
+#  lang info
+100=Deutsch
+101=de-de
+102=__builtin__
+#  _ed_code func lang
+200=esc-Menü  f1 Einfügen  f2 Chinesisch eingeben  f3 Aktualisieren  f4 Vervollständigen
+201=home Vorige Seite  end Nächste Seite  esc Eingabe beenden  0-9 Auswahl  a-z Pinyin-Eingabe  A-Z Direkt-Eingabe
+202=Seite:
+203=Kandidat:
+204=Eingabe:
+205=Chinesisch:
+206=Falls nach Auswahl keine Reaktion erfolgt, einmal Enter drücken; manche Funktionen erfordern vorheriges Speichern.
+207=Ersetzen mit:
+208=Suchen:
+209=Nichts gefunden
+210=Ersetzen-Modus
+211=Erstes ersetzen
+212=Alles ersetzen
+213=Ersetzt
+214=Element(e)
+215=Bitte zunächst das erste suchen
+216=Zeile
+217=Spalte
+218=Nächster Treffer bei
+219=Eingabe ist leer
+220=In die Zwischenablage kopiert
+221=Datei in die Zwischenablage kopiert
+222=Code eingeben, mit esc beenden
+223=Dateiname eingeben
+224=Dateiname
+225=Datei erfolgreich gespeichert
+226=Dateifehler beim Öffnen:
+227=Befehl:
+228=Ausgabe:
+229=Kompilierparameter ändern
+230=Kompilierparameter
+231=0.Zurück 1.Einfügen 2.Beenden 3.Speichern 4.Öffnen 5.Kompilieren
+232=6.Kompilieren+Ausführen 7.Über 8.Code-Obfuskation 9.Springe  a.Kopieren  b.Anzeige-Einstellungen
+233=c.Code-Formatierung  d.Ersten suchen  e.Suchen  f.Ersetzen  g.Sprach-Einstellungen  h.Kompilier-Einstellungen
+#  other lang
+300=Bitte eine Taste drücken, um fortzufahren...
+301=C++ Quellcodedatei kompilieren und ausführen
+302=C++ Compiler
+303=Kompilieren
+304=Start
+305=Stopp
+306=Ausführen
+307=Zeit
+#  _EDTV lang
+400=IDE Anzeige-Menü
+401=Bitte Theme-Namen eingeben
+402=Alle Themes befinden sich in setting, Standard-Theme ist Classic Plus Dark
+403=Aktuelles Theme gespeichert in view_mr.ini
+404=Aktuelles Theme
+405=Name (ohne Dateiendung)
+#  _EDLG lang
+500=IDE Sprach-Menü
+501=Bitte Sprach-Namen eingeben
+502=Alle Sprachen befinden sich in setting, Standardsprache ist zh-cn
+503=Aktuelle Sprache gespeichert in lang_mr.ini
+504=Aktuelle Sprache
+505=Name (ohne Dateiendung)

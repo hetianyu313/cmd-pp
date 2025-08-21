@@ -76,9 +76,11 @@ void runHooks(const string& event, const string& fname){
         	if(h.command==""){
         		cout<<"[Hook] No hook at "<<event<<endl;
 			}
-            string cmd = h.command + " \"" + fname + "\"";
-            cout << "[Hook] "<<event<<" -> "<<cmd<<endl;
-            system(cmd.c_str());
+			else{
+	            string cmd = h.command + " \"" + fname + "\"";
+	            cout << "[Hook] "<<event<<" -> "<<cmd<<endl;
+	            system(cmd.c_str());				
+			}
         }
     }
 }

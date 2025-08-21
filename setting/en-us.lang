@@ -1,16 +1,16 @@
 #   en-us lang file
 #  lang info
-100=English-US
+100=English - United States
 101=en-us
 102=__builtin__
 #  _ed_code func lang
-200=esc menu f1 insert f2 input Chinese f3 refresh f4 autocomplete
-201=home previous page end next page esc exit input 0-9 select a-z pinyin input A-Z direct input
+200=esc menu  f1 insert  f2 input Chinese  f3 refresh  f4 complete
+201=home prev page  end next page  esc exit input 0-9 select  a-z pinyin input  A-Z direct input
 202=Page:
-203=Candidates:
+203=Candidate:
 204=Input:
 205=Chinese:
-206=If there is no response after selection, press Enter once. Some functions require saving before using
+206=If nothing happens after selection, press Enter once. Some functions require saving first.
 207=Replace with:
 208=Search:
 209=Not found
@@ -19,7 +19,7 @@
 212=Replace all
 213=Replaced
 214=items
-215=Please find the first one first
+215=Please search the first one first
 216=Line
 217=Column
 218=Next match at
@@ -33,9 +33,14 @@
 226=File open error:
 227=Command:
 228=Execution result:
+229=Modify compile parameters
+230=Compile parameters
+231=0.Return 1.Insert 2.Exit 3.Save 4.Open 5.Compile
+232=6.Compile+Run 7.About 8.Obfuscate 9.Jump a.Copy b.Display settings
+233=c.Format code d.Find first e.Find f.Replace g.Language settings h.Compile settings
 #  other lang
 300=Press any key to continue...
-301=C++ source file compile and run
+301=C++ source file compile & run
 302=C++ compiler
 303=Compile
 304=Start
@@ -44,8 +49,15 @@
 307=Time
 #  _EDTV lang
 400=IDE display menu
-401=Please enter the theme name
+401=Please enter theme name
 402=All themes are stored in setting, default theme is Classic Plus Dark
 403=Current theme stored in view_mr.ini
 404=Current theme
-405=Name, do not include file extension
+405=Name (without extension)
+#  _EDLG lang
+500=IDE language menu
+501=Please enter language name
+502=All languages are stored in setting, default language is zh-cn
+503=Current language stored in lang_mr.ini
+504=Current language
+505=Name (without extension)

@@ -807,13 +807,46 @@ namespace _ed_code{
 		cout <<lan_str(213)<< cnt <<lan_str(214)<< "\n";
 		edt_pause();
 	}
+	void _edf_bycs(){//ÐÞ¸Ä±àÒë²ÎÊý 
+		system("cls");
+		clearInputBuffer();
+		EdmoveTo(0,0);
+		g_conc.SetRGBmap(135);
+		string s = _ed_cpp::_ed_yh;
+		bool flag = 1;
+		while(flag){
+			fillline(0);fillline(1);
+			EdmoveTo(0,0);
+			cout<<lan_str(229)<<"\n"<<lan_str(230)<<":"<<s;
+			int c = _getch();
+			switch(c){
+				case 8:
+					if(s.size()>0) s.erase(s.size()-1);
+					break;//backspace
+				case 13: flag=0; break;//enter
+				case 27: flag=0 ;break;//escape
+				case 0:c=_getch();break;
+				case 0xe0:c=_getch();break;
+				default:
+					s+=(char)c;
+					break;
+			}
+		}
+		_ed_cpp::_ed_yh = s;
+		_ed_cpp::write_by();
+		cout<<"_edf_bycs:set to "<<s<<endl;
+	}
 	void _edf_escape(){
 		system("cls");
 		EdmoveTo(0,0);g_conc.SetRGBmap(135);
 		cout<<lan_str(206)<<"\n";
-		cout<<"0.back\n1.insert\n2.exit cmd++\n3.save file\n4.load file\n5.complete\n6.complete and run\n7.about\n";
-		cout<<"8.obfuscate code\n9.move cursor\na.copy to clipboard\nb.set view of IDE\n";
-		cout<<"c.code style\nd.find first\ne.find\nf.replace\ng.set language of IDE\n";
+		//"0.back\n1.insert\n2.exit cmd++\n3.save file\n4.load file\n5.complete\n6.complete and run\n7.about\n";
+		//"8.obfuscate code\n9.move cursor\na.copy to clipboard\nb.set view of IDE\n";
+		//"c.code style\nd.find first\ne.find\nf.replace\ng.set language of IDE\n";
+		//"h.set compete info\n";
+		cout<<lan_str(231)<<"\n";
+		cout<<lan_str(232)<<"\n";
+		cout<<lan_str(233)<<"\n";
 		int c = _getch();
 		switch (c){
 			case '0':return;break;
@@ -833,6 +866,7 @@ namespace _ed_code{
 			case 'e':_edf_find_next();break;
 			case 'f':_edf_replace();break;
 			case 'g':elang::_el_main();break;
+			case 'h':_edf_bycs();break;
 		}
 		g_conc.SetRGBmap(15);
 		system("cls");

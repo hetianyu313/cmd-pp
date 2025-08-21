@@ -23,12 +23,24 @@ namespace _ed_cpp{
 	void init(){
 		getexedir();
 		string fn = exedir+"setting\\mingw_g++.ini";
+		cout<<"_ed_cpp:file path="<<fn<<"\n";
 		ifstream ifs(fn.c_str());
 		getline(ifs,_ed_gpp_path);
 		getline(ifs,_ed_yh);
 		getline(ifs,_ed_yh2);
 		getline(ifs,_ed_include);
 		ifs.close();
+	}
+	void write_by(){
+		getexedir();
+		string fn = exedir+"setting\\mingw_g++.ini";
+		cout<<"_ed_cpp:file path="<<fn<<"\n";
+		ofstream ofs(fn.c_str());
+		ofs<<_ed_gpp_path<<endl;
+		ofs<<_ed_yh<<endl;
+		ofs<<_ed_yh2<<endl;
+		ofs<<_ed_include<<endl;
+		ofs.close();
 	}
 	string _gen_cmd(string gpp_path,string in_f,string out_f,
 		string yh,string include,string yh2){
