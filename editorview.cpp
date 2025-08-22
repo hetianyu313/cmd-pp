@@ -105,7 +105,7 @@ namespace eview{
 		EdmoveTo(0,0);g_conc.SetRGBmap(135);
 		string s = "";
 		while(1){
-			cout<<lan_str(400)<<"\n0.退出\n1.设置主题\n2.help\n3.当前主题\n";
+			cout<<lan_str(400)<<"\n0.exit\n1.set IDE view\n2.help\n3.now view\n";
 			cin>>s;
 			if(s=="0"){
 				cout<<"_ev_main:return to codemain\n";
