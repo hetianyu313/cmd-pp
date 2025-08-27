@@ -12,7 +12,7 @@
 #include"editorlang.cpp"
 #include"editorsrf.cpp"
 using namespace std;
-//-std=c++14 -O2 -s -m32
+//-std=c++14 -O2 -s -m32 -Wsign-compare
 namespace _ed_code{
 	int _ed_width,_ed_height;
 	int _ed_top = 0;//顶端的行数 
@@ -150,10 +150,9 @@ namespace _ed_code{
 				//if(cnt==zz_y&&col==zz_x)fc_zdbq = 0;
 			}
 			if(!f_define && !f_str && !f_zs && !f_dhzs && !f_num){
-	            if(mp_c_qh[c]==1||c==' '||cnt==s.size()-1){
+	            if(mp_c_qh[c]==1||c==' '||(unsigned int)cnt==s.size()-1){
 	                if(gjz.size()>0){
 	                    if(mp_c_hs1[gjz]){
-	                        // 类型关键字
 	                        COORD pos = EdgetPosition();
 	                        EdmoveTo(pos.Y,pos.X-gjz.size());
 	                        g_conc.SetRGBmap(g_view.c_type);
@@ -162,7 +161,6 @@ namespace _ed_code{
 	                        last_kw = gjz; // <-- 记录
 	                    }
 	                    else if(mp_c_hs2[gjz]){
-	                        // 控制/函数关键字
 	                        COORD pos = EdgetPosition();
 	                        EdmoveTo(pos.Y,pos.X-gjz.size());
 	                        g_conc.SetRGBmap(g_view.c_func);
@@ -183,11 +181,11 @@ namespace _ed_code{
 	        }
 	        lc = c;
 	        cnt++;
-	        if(!no_putchar_this) putchar(c);
+		    if(!no_putchar_this) putchar(c);
+			if(col == zz_x && cnt<=zz_y && !last_kw.empty()){
+		        g_doc = last_kw;
+		    }
 		}
-		if(col == zz_x && !last_kw.empty()){
-	        g_doc = last_kw;
-	    }
 	}
 	const string fl = "																														";
 	//120字符占位 
@@ -248,7 +246,7 @@ namespace _ed_code{
         cout << " FILES ";
         g_conc.SetRGBmap(15);
         int maxShow = _ed_line-2;
-        for(int i=0;i<fileList.size() && i<maxShow;i++){
+        for(int i=0;(unsigned int)i<fileList.size() && i<maxShow;i++){
             EdmoveTo(i+1, startX);
             if(i==fileSel){
                 g_conc.SetRGBmap(112);
@@ -279,7 +277,7 @@ namespace _ed_code{
 			//g_conc.SetRGBmap((g_view.c_code%16+1)%16,g_view.c_code/16);
 			EdmoveTo(i,0);
 			cout<<fl;
-			if(v.size()-1<cl)continue;
+			if(v.size()-1<(unsigned int)cl)continue;
 			EdmoveTo(i,0);
 			//g_conc.SetRGBmap(7);
 			printf("%-3d",cl);
@@ -299,7 +297,7 @@ namespace _ed_code{
 		if(zz_x > 0){  // 确保不是第一行
 			zz_x--;  // 先移动到上一行
 			// 调整列位置不超过上一行的长度
-			if(zz_y > v[zz_x].size()){
+			if((unsigned int)zz_y > v[zz_x].size()){
 				zz_y = v[zz_x].size();
 			}
 			// 视口滚动逻辑
@@ -310,8 +308,8 @@ namespace _ed_code{
 		//printf("_edf_up zz:%d,%d top:%d line:%d\n",zz_x,zz_y,_ed_top,_ed_line);
 	}
 	void _edf_down(){
-		if(zz_x<v.size()-1){
-			if(v[zz_x+1].size()>=zz_y){
+		if((unsigned int)zz_x<v.size()-1){
+			if(v[zz_x+1].size()>=(unsigned int)zz_y){
 				zz_x++;
 			}
 			else{
@@ -327,7 +325,7 @@ namespace _ed_code{
 		}
 	}
 	void _edf_right(){
-		if(zz_y<v[zz_x].size()){
+		if((unsigned int)zz_y<v[zz_x].size()){
 			zz_y++;
 		}
 	}
@@ -397,7 +395,6 @@ namespace _ed_code{
 	        v[zz_x].insert(v[zz_x].begin()+zz_y,c); zz_y++;
 	    }
 	}
-	// 窗口过程钩子
 	LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 		if (msg == WM_CONTEXTMENU) {
 			return 0; // 完全阻止右键菜单
@@ -406,17 +403,13 @@ namespace _ed_code{
 	}	
 	void _edf_nopaste() {
 		HWND hConsole = GetConsoleWindow();
-		// 修改窗口样式
 		LONG_PTR style = GetWindowLongPtr(hConsole, GWL_STYLE);
 		SetWindowLongPtr(hConsole, GWL_STYLE, style & ~WS_MAXIMIZEBOX & ~WS_SIZEBOX);
-		// 设置新的窗口过程
 		SetWindowLongPtr(hConsole, GWLP_WNDPROC, (LONG_PTR)WndProc);
-		// 禁用快速编辑模式
 		HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
 		DWORD mode;
 		GetConsoleMode(hInput, &mode);
 		SetConsoleMode(hInput, mode & ~ENABLE_QUICK_EDIT_MODE);
-		// 禁用系统菜单
 		HMENU hMenu = GetSystemMenu(hConsole, FALSE);
 		if (hMenu) {
 			DeleteMenu(hMenu, SC_CLOSE, MF_BYCOMMAND);
@@ -426,7 +419,7 @@ namespace _ed_code{
 		}
 	}
 	void _edf_back() {
-		if (v.empty() || zz_x >= v.size()) return;
+		if (v.empty() || (unsigned int)zz_x >= v.size()) return;
 		// 情况1：当前行有字符可删
 		if (zz_y > 0) {
 			unsigned char c = static_cast<unsigned char>(v[zz_x][zz_y - 1]);
@@ -467,21 +460,21 @@ namespace _ed_code{
 			_ed_top--;
 			zz_x--;
 			// 光标位置校正（更安全的写法）
-			if(zz_y>v[zz_x].size()) zz_y = v[zz_x].size();
+			if((unsigned int)zz_y>v[zz_x].size()) zz_y = v[zz_x].size();
 		}
 	}
 	void _edf_pgdn() {
-		if(_ed_top + _ed_line < v.size()) {
+		if((unsigned int)_ed_top + _ed_line < v.size()) {
 			_ed_top++;
 			zz_x++;
 			// 光标位置校正（包含边界检查）
-			if(zz_y>v[zz_x].size()) zz_y = v[zz_x].size();
+			if((unsigned int)zz_y>v[zz_x].size()) zz_y = v[zz_x].size();
 		}
 	}
 	void _edf_insert(){
 		system("cls");
 		clearInputBuffer();
-		char c;
+		int c;
 		EdmoveTo(0,0);g_conc.SetRGBmap(135);
 		cout<<lan_str(222)<<"\n";
 		string s = "";
@@ -531,7 +524,7 @@ namespace _ed_code{
 		_ed_cpp::_ed_in_f = fn;//自动设置 
 		for(int i = 0;i<(int)v.size();i++){
 			ofs<<v[i];
-			if(i!=v.size()-1) ofs<<"\n";
+			if((unsigned int)i!=v.size()-1) ofs<<"\n";
 		}
 		ofs.close();
 		//file saved successfully
@@ -539,7 +532,6 @@ namespace _ed_code{
 		runHooks("onSave", fn);
 		edt_pause();
 	}
-	// 将文件每行内容读取到vector<string>
 	vector<string> readFileToVector(const string& filename) {
 		vector<string> lines;
 		ifstream file(filename);
@@ -585,10 +577,9 @@ namespace _ed_code{
 		string fn;
 		getline(cin,fn);
 		g_conc.SetRGBmap(78);
-		cout<<"警告:代码混淆功能不推荐使用,产生后果自负!\n";
-		cout<<"	    这是最后一次提醒,你可以关闭窗口	    \n";
+		cout<<lan_str(234)<<endl<<lan_str(235)<<endl;//代码混淆功能不推荐使用
 		g_conc.SetRGBmap(135);
-		edt_pause();
+		edt_pause();cout<<"\n";
 		string cmd = "\""+exedir+"tool\\CodeObfuscator.exe\" \""+_ed_cpp::_ed_in_f+"\" \""+fn+"\"";
 		cout<<lan_str(227)<<cmd<<endl;
 		int r = _ed_cpp::runProcess(cmd.c_str());
@@ -605,10 +596,9 @@ namespace _ed_code{
 		string fn;
 		getline(cin,fn);
 		g_conc.SetRGBmap(78);
-		cout<<"警告:代码整理功能不推荐使用,产生后果自负!\n";
-		cout<<"	 这是最后一次提醒,你可以关闭窗口	 \n";
+		cout<<lan_str(236)<<endl<<lan_str(237)<<endl;//代码整理功能不推荐使用
 		g_conc.SetRGBmap(135);
-		edt_pause();
+		edt_pause();cout<<"\n";
 		string cmd = "\""+exedir+"tool\\cpp_code_nai.exe\" \""+_ed_cpp::_ed_in_f+"\" \""+fn+"\"";
 		cout<<lan_str(227)<<cmd<<endl;
 		int r = _ed_cpp::runProcess(cmd.c_str());
@@ -623,7 +613,7 @@ namespace _ed_code{
 		cout<<"cursor line number:\n";
 		int ln;
 		cin>>ln;
-		if(ln<0||ln>=v.size()){
+		if(ln<0||(unsigned int)ln>=v.size()){
 			ln = 0;
 		}
 		_ed_top = ln;
@@ -643,7 +633,7 @@ namespace _ed_code{
 		string s = "";
 		for(int i = 0;i<(int)v.size();i++){
 			s+=v[i];
-			if(i!=v.size()-1)s+="\n";
+			if((unsigned int)i!=v.size()-1)s+="\n";
 		}
 		_ed_jqb jq;
 		if(ec==0){
@@ -670,22 +660,17 @@ namespace _ed_code{
 		system("cls");
 		clearInputBuffer();
 		EdmoveTo(0,0); g_conc.SetRGBmap(135);
-	
-		//内容
 		cout<<lan_str(208)<<endl;
 		string keyword;
 		getline(cin, keyword);
-	
 		if(keyword.empty()) {
 			//Empty input
 			cout<<lan_str(219)<<endl;
 			edt_pause();
 			return;
 		}
-	
 		bool found = false;
 		int fx = -1, fy = -1;
-	
 		for(size_t i = 0; i < v.size(); i++) {
 			size_t pos = v[i].find(keyword);
 			if(pos != string::npos) {
@@ -695,7 +680,6 @@ namespace _ed_code{
 				break;
 			}
 		}
-	
 		if(found) {
 			zz_x = fx; zz_y = fy;
 			if(zz_x < _ed_top) {
@@ -720,15 +704,13 @@ namespace _ed_code{
 			system("cls");
 			cout <<lan_str(215)<< "\n";//No previous search. Use find first.
 			edt_pause();
-			//cout<<"_last_find empty,user input\n";
-			//_edf_find();
 			return;
 		}
 		bool found = false;
 		int fx = -1, fy = -1;
 		// 从当前位置继续往后查找
 		for(size_t i = _last_x; i < v.size(); i++) {
-			size_t startPos = (i == _last_x ? _last_y + 1 : 0);
+			size_t startPos = ((unsigned int)i == _last_x ? _last_y + 1 : 0);
 			size_t pos = v[i].find(_last_find, startPos);
 			if(pos != string::npos) {
 				fx = (int)i;
@@ -773,7 +755,7 @@ namespace _ed_code{
 		}
 		cout << lan_str(207);
 		getline(cin, to);
-		//换一个   换全部";
+		//换一个   换全部
 		cout<<lan_str(210)<<"\n"<<lan_str(211)<<"\n"<<lan_str(212)<<"\n";
 		char c = _getch();
 		int cnt = 0;
@@ -836,6 +818,93 @@ namespace _ed_code{
 		_ed_cpp::write_by();
 		cout<<"_edf_bycs:set to "<<s<<endl;
 	}
+	void _edf_find_regex() {//正则查找
+	    system("cls");
+	    clearInputBuffer();
+	    EdmoveTo(0,0); g_conc.SetRGBmap(135);
+	    cout<<lan_str(238)<<"\n";
+	    string pattern;
+	    getline(cin, pattern);
+	    if(pattern.empty()) {
+	        cout <<lan_str(219)<< endl;
+	        edt_pause();
+	        return;
+	    }
+	    regex reg;
+	    try {
+	        reg = regex(pattern);
+	    } catch(const regex_error& e) {
+	        cout <<lan_str(239)<< e.what() << endl;
+	        edt_pause();
+	        return;
+	    }
+	    bool found = false;
+	    for(size_t i=0; i<v.size(); i++) {
+	        auto begin = sregex_iterator(v[i].begin(), v[i].end(), reg);
+	        auto end = sregex_iterator();
+	        if(begin != end) {
+	            zz_x = (int)i;
+	            zz_y = (int)begin->position();
+	            if(zz_x < _ed_top) _ed_top = zz_x;
+	            else if(zz_x >= _ed_top + _ed_line) _ed_top = max(0, zz_x - _ed_line/2);
+	            cout <<lan_str(216)<< zz_x <<lan_str(217)<< zz_y << endl;
+	            found = true;
+	            Sleep(200);
+	            break;
+	        }
+	    }
+	    if(!found) {
+	        cout <<lan_str(209)<< pattern << endl;
+	        edt_pause();
+	    }
+	}
+	void _edf_replace_regex() {//z正则替换
+	    system("cls");
+	    clearInputBuffer();
+	    EdmoveTo(0,0); g_conc.SetRGBmap(135);
+	    cout<<lan_str(238)<<"\n";
+	    string pattern;
+	    getline(cin, pattern);
+	    cout <<lan_str(207)<<"\n";;
+	    string replacement;
+	    getline(cin, replacement);
+
+	    regex reg;
+	    try {
+	        reg = regex(pattern);
+	    } catch(const regex_error& e) {
+	        cout << lan_str(239) << e.what() << endl;
+	        edt_pause();
+	        return;
+	    }
+
+	    cout <<lan_str(240)<< "\n";//mode
+	    char c = _getch();
+	    int cnt = 0;
+
+	    if(c == '1') {
+	        for(size_t i=0; i<v.size(); i++) {
+	            smatch m;
+	            if(regex_search(v[i], m, reg)) {
+	                v[i].replace(m.position(), m.length(), replacement);
+	                zz_x = (int)i;
+	                zz_y = m.position() + replacement.size();
+	                cnt = 1;
+	                break;
+	            }
+	        }
+	    } else if(c == '2') {
+	        for(size_t i=0;i<v.size();i++) {
+	            string replaced = regex_replace(v[i], reg, replacement);
+	            if(replaced != v[i]) {
+	                v[i] = replaced;
+	                cnt++;
+	            }
+	        }
+	    }
+	    cout <<lan_str(213)<< cnt <<lan_str(214)<< endl;
+	    edt_pause();
+	}
 	void _edf_escape(){
 		system("cls");
 		EdmoveTo(0,0);g_conc.SetRGBmap(135);
@@ -847,6 +916,7 @@ namespace _ed_code{
 		cout<<lan_str(231)<<"\n";
 		cout<<lan_str(232)<<"\n";
 		cout<<lan_str(233)<<"\n";
+		cout<<lan_str(241)<<"\n";
 		int c = _getch();
 		switch (c){
 			case '0':return;break;
@@ -867,9 +937,14 @@ namespace _ed_code{
 			case 'f':_edf_replace();break;
 			case 'g':elang::_el_main();break;
 			case 'h':_edf_bycs();break;
+			case 'i': _edf_find_regex(); break;
+			case 'j': _edf_replace_regex(); break;
 		}
 		g_conc.SetRGBmap(15);
 		system("cls");
+	}
+	void put_ed_run(){
+		printf("line:%d row:%d top:%d size:%d tot:%d\n",zz_x,zz_y,_ed_top,_ed_line,v.size());
 	}
 	void _edf_zhcn_display(vector<_sr_py> v,int p,string ci){
 		g_conc.SetRGBmap(8);
@@ -882,7 +957,7 @@ namespace _ed_code{
 		EdmoveTo(_ed_line+1,0);
 		cout<<fl<<endl<<fl<<endl;
 		EdmoveTo(_ed_line+1,0);
-		printf("_ed_run zz:%d,%d top:%d line:%d vs:%d\n",zz_x,zz_y,_ed_top,_ed_line,v.size());
+		put_ed_run();
 		cout<<g_ktip<<"\n"; 
 		g_conc.SetRGBmap(112);
 		EdmoveTo(_ed_line+3,0);
@@ -891,7 +966,7 @@ namespace _ed_code{
 		string s = Utf8ToAnsi(lan_str(205));
 		for(int i = 0;i<10;i++){
 			int l = p*10+i;
-			if(l<v.size())s+=to_string(((i+1)%10))+"."+v[l].hz+" ";
+			if((unsigned int)l<v.size())s+=to_string(((i+1)%10))+"."+v[l].hz+" ";
 		}
 		cout<<AnsiToUtf8(s)<<"\n"<<lan_str(202)<<p<<"/"<<v.size()/10<<"("<<lan_str(203)<<v.size()<<")";
 		cout<<lan_str(204)<<ci;
@@ -918,7 +993,7 @@ namespace _ed_code{
 			}
 			else if(c == 0 || c == 0xE0){
 				c = _getch();
-				if((int)c==71&&(page*10+1<vp.size())){//home
+				if((int)c==71&&((unsigned int)page*10+1<vp.size())){//home
 					page++;
 				}
 				else if((int)c==79&&page>0){//end
@@ -964,7 +1039,7 @@ namespace _ed_code{
 			}
 			else if(c>='0'&&c<='9'){
 				int n = ((c-'0'-1+10)%10)+page*10;
-				if(vp.size()>n){
+				if(vp.size()>(unsigned int)n){
 					for(char i : vp[n].hz){//add string to code
 						_edf_addch(i);
 					}
@@ -974,7 +1049,7 @@ namespace _ed_code{
 					_ed_flash();
 				}
 			}
-			if(page>vp.size()/10) page = ((int)vp.size())/10;
+			if((unsigned int)page>vp.size()/10) page = ((int)vp.size())/10;
 			if(page<=0) page=0;
 			_edf_zhcn_display(vp,page,ci);
 		}
@@ -1005,9 +1080,9 @@ namespace _ed_code{
 	}
 	string fldir = "C:\\Users\\A\\Desktop";
 	string getCurrentToken(){
-	    if(zz_x < 0 || zz_x >= v.size()) return "";
+	    if(zz_x < 0 || (unsigned int)zz_x >= v.size()) return "";
 	    string &line = v[zz_x];
-	    if(zz_y > line.size()) return "";
+	    if((unsigned int)zz_y > line.size()) return "";
 	    int start = zz_y - 1;
 	    while(start >= 0 && (isalnum(line[start]) || line[start]=='_')){
 	        start--;
@@ -1082,7 +1157,7 @@ namespace _ed_code{
 	    fillline(_ed_line+2);
 		EdmoveTo(_ed_line+1,0);
 		g_conc.SetRGBmap(8);
-		printf("_ed_run zz:%d,%d top:%d line:%d vs:%d\n",zz_x,zz_y,_ed_top,_ed_line,v.size());
+		put_ed_run();
 		cout<<g_ktip<<" doc:"<<g_doc;
 		EdmoveTo(zz_x-_ed_top,zz_y+3);
 		return 0;
@@ -1103,19 +1178,9 @@ int main(){
 	elang::init();
 	//_ed_code::load_file_list(_ed_code::fldir);
 	cout<<"main:init all end\n";
-	/*auto v = srf::py_near("bian");
-	cout<<v.size()<<endl;
-	for(auto i : v){
-		cout<<i.hz<<" "<<i.py<<endl;
-	}*/
 	cout<<"[lang] name="<<lan_str(100)<<" / "<<lan_str(101)<<endl;
 	edt_pause();
 	system("cls");
-	/*string s;
-	vector<pair<string, int>> v = {{"T1",0},{"T2",1},{"T3",2},{"T4",3},{"T5",4},{"T6",5},
-	{"T1",0},{"T2",1},{"T3",2},{"T4",3},{"T5",4},{"T6",5}};
-	string s1 = "test message";
-	cwh::createConsoleInsideWindow(s1,cwh::DialogType::CUSTOM,&s,&v);*/
 	_ed_code::_ed_flash();
 	while(1){
 		_ed_code::_ed_run();
