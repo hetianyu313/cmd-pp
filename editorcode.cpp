@@ -12,7 +12,7 @@
 #include"editorlang.cpp"
 #include"editorsrf.cpp"
 using namespace std;
-//-std=c++14 -O2 -s -m32 -Wsign-compare
+//-std=c++14 -O2 -s -m32
 namespace _ed_code{
 	int _ed_width,_ed_height;
 	int _ed_top = 0;//顶端的行数 
@@ -81,7 +81,7 @@ namespace _ed_code{
 		}
 		cout<<"load_docmap:loaded "<<docMap.size()<<" items of docMap\n";
 	}
-	void _ed_outcol(string s,bool &f_dhzs,int col = -1){
+	void _ed_outcol(string s,bool &f_dhzs,int col = -1){//utf8 string
 		bool f_define = 0;
 		bool f_str = 0;
 		bool f_zs = 0;
@@ -90,13 +90,35 @@ namespace _ed_code{
 		string gjz = "";
 		string last_kw = "";
 		int cnt = 0;
-		if(f_dhzs) g_conc.SetRGBmap(g_view.c_zs);
+		if(f_dhzs){
+			g_view.c_zs.tog();
+			TogBold(g_view.b_zs);
+			TogItalic(g_view.i_zs);
+			TogUnderline(g_view.u_zs);
+		}
+		string u8buf;   // 用于缓存一个 UTF8 字符
+	    auto flush_u8buf = [&](bool count = true) {
+	        if (!u8buf.empty()) {
+	            printf("%s", u8buf.c_str());
+	            if (count) {
+		            if ((unsigned char)u8buf[0] < 0x80) {
+		                cnt += 1;     // 英文1列
+		            } else {
+		                cnt += 2;     // 汉字在ANSI里是两个字节
+		            }
+		        }
+	            u8buf.clear();
+	        }
+	    };
 		for(char c : s){
 			bool no_putchar_this = 0;
 			if(f_dhzs){
 				if(lc=='*'&&c=='/'){
 					f_dhzs = 0;
-					g_conc.SetRGBmap(g_view.c_code);
+					TogBold(0);
+					TogItalic(0);
+					TogUnderline(0);
+					g_view.c_code.tog();
 				}
 				else{
 					if(cnt==zz_y&&col==zz_x)fc_zdbq = 0;
@@ -107,14 +129,17 @@ namespace _ed_code{
 			else if(!f_dhzs && !f_str && !f_zs && lc=='/' && c=='*'){
 				f_dhzs = (bool)1;
 				if(cnt==zz_y&&col==zz_x)fc_zdbq = 0;
-				g_conc.SetRGBmap(g_view.c_zs);
+				g_view.c_zs.tog();
+				TogBold(g_view.b_zs);
+				TogItalic(g_view.i_zs);
+				TogUnderline(g_view.u_zs);
 				no_putchar_this = 1;
 				putchar(c);
 			}
 			else if(!f_define && !f_str && !f_zs && !f_dhzs && c=='#' && lc!='\''){
 				f_define = 1;
 				if(col==zz_x)fc_zdbq = 0;
-				g_conc.SetRGBmap(g_view.c_def);
+				g_view.c_def.tog();
 			}
 			else if(!f_define && !f_zs && !f_dhzs && lc!='\\' && c=='\"'){
 				f_str = !f_str;
@@ -122,15 +147,19 @@ namespace _ed_code{
 					no_putchar_this = 1;
 					putchar(c);	
 					if(cnt>zz_y&&col==zz_x)fc_zdbq = 1;
+					g_view.c_code.tog();
 				}
 				else{
 					if(cnt<=zz_y&&col==zz_x)fc_zdbq = 0;
+					g_view.c_str.tog();
 				}
-				g_conc.SetRGBmap(f_str ? g_view.c_str : g_view.c_code);
 			}
 			else if(!f_define && !f_str && !f_zs && !f_dhzs && lc=='/' && c=='/'){
 				no_putchar_this = 1;
-				g_conc.SetRGBmap(g_view.c_zs);
+				g_view.c_zs.tog();
+				TogBold(g_view.b_zs);
+				TogItalic(g_view.i_zs);
+				TogUnderline(g_view.u_zs);
 				COORD pos = EdgetPosition();
 				EdmoveTo(pos.Y,pos.X-1);
 				putchar('/');
@@ -140,13 +169,13 @@ namespace _ed_code{
 			}
 			else if(!f_num && (isdigit(c)) && (mp_c_qh[lc] || lc==0 || lc==' ') && !f_define && !f_str && !f_zs && !f_dhzs){
 				f_num = 1;
-				g_conc.SetRGBmap(g_view.c_num);
+				g_view.c_num.tog();
 				//if(cnt==zz_y&&col==zz_x)fc_zdbq = 0;
 			}
-			else if(f_num && !(isdigit(c)||c=='.'||c=='L'||c=='F'||c=='U'||c=='x'||c=='X'||c=='b'||c=='B'
+			else if(f_num && !(isdigit(c)||c=='.'||c=='L'||c=='F'||c=='U'||c=='x'||c=='X'||c=='b'||c=='l'
 			||c=='A'||c=='B'||c=='C'||c=='D'||c=='E'||c=='a'||c=='b'||c=='c'||c=='d'||c=='e'||c=='f')){
 				f_num = 0;
-				g_conc.SetRGBmap(g_view.c_code);
+				g_view.c_code.tog();
 				//if(cnt==zz_y&&col==zz_x)fc_zdbq = 0;
 			}
 			if(!f_define && !f_str && !f_zs && !f_dhzs && !f_num){
@@ -155,49 +184,93 @@ namespace _ed_code{
 	                    if(mp_c_hs1[gjz]){
 	                        COORD pos = EdgetPosition();
 	                        EdmoveTo(pos.Y,pos.X-gjz.size());
-	                        g_conc.SetRGBmap(g_view.c_type);
+	                        g_view.c_type.tog();
+							TogBold(g_view.b_type);
+							TogItalic(g_view.i_type);
+							TogUnderline(g_view.u_type);
 	                        for(char c : gjz) putchar(c);
-	                        g_conc.SetRGBmap(g_view.c_code);
+							g_view.c_code.tog();
+	                        TogBold(0);
+							TogItalic(0);
+							TogUnderline(0);
 	                        last_kw = gjz; // <-- 记录
 	                    }
 	                    else if(mp_c_hs2[gjz]){
 	                        COORD pos = EdgetPosition();
 	                        EdmoveTo(pos.Y,pos.X-gjz.size());
-	                        g_conc.SetRGBmap(g_view.c_func);
+	                        g_view.c_func.tog();
+							TogBold(g_view.b_func);
+							TogItalic(g_view.i_func);
+							TogUnderline(g_view.u_func);
 	                        for(char c : gjz) putchar(c);
-	                        g_conc.SetRGBmap(g_view.c_code);
+	                        g_view.c_code.tog();
+	                        TogBold(0);
+							TogItalic(0);
+							TogUnderline(0);
 	                        last_kw = gjz; // <-- 记录
 	                    }
 	                }
 	                if(mp_c_qh[c]){
-	                    g_conc.SetRGBmap(g_view.c_sign);
+	                    g_view.c_sign.tog();
 	                }
 	                gjz = "";
 	            }
 	            else{
-	                g_conc.SetRGBmap(g_view.c_code);
+				g_view.c_code.tog();
 	                gjz += c;
 	            }
 	        }
 	        lc = c;
-	        cnt++;
-		    if(!no_putchar_this) putchar(c);
+		    /*if(!no_putchar_this){
+		    	putchar(c);
+			}*/
+			// 收集到 u8buf
+	        
+	        if (!no_putchar_this) {
+	            u8buf.push_back(c);
+	            // 判断是否组成了完整 UTF-8 字符
+	            if ( (u8buf[0] & 0x80) == 0 ) {
+	                // 单字节 ASCII
+	                flush_u8buf();
+	            }
+	            else if ( (u8buf[0] & 0xE0) == 0xC0 && u8buf.size() == 2 ) {
+	                flush_u8buf();
+	            }
+	            else if ( (u8buf[0] & 0xF0) == 0xE0 && u8buf.size() == 3 ) {
+	                flush_u8buf();
+	            }
+	            else if ( (u8buf[0] & 0xF8) == 0xF0 && u8buf.size() == 4 ) {
+	                flush_u8buf();
+	            }
+	            // 否则还没收集完，继续等下一个字节
+	        }
+	        else cnt++;
 			if(col == zz_x && cnt<=zz_y && !last_kw.empty()){
 		        g_doc = last_kw;
 		    }
 		}
+		TogBold(0);
+		TogItalic(0);
+		TogUnderline(0);
 	}
-	const string fl = "																														";
+	const string fl = "                                                                                                                        ";
 	//120字符占位 
+	void filllinePRO(int i, int r=30, int g=30, int b=30){
+	    EdmoveTo(i,0);
+	    // 置背景色
+	    printf("\x1b[48;2;%d;%d;%dm", r, g, b);
+	    // 填充颜色
+	    cout<<fl;
+	    //EdmoveTo(i,0);
+	}
 	void fillline(int i){
-		COORD coord = {0, (SHORT)i}; // 第 i 行
+		filllinePRO(i,g_view.c_code.r1,g_view.c_code.g1,g_view.c_code.b1);
+		/*COORD coord = {0, (SHORT)i}; // 第 i 行
 		DWORD written;
 		FillConsoleOutputCharacterA(hConsole, ' ', _ed_width, coord, &written);
-		FillConsoleOutputAttribute(hConsole,g_view.c_code, _ed_width, coord, &written);
-		g_conc.SetRGBmap(g_view.c_line);
-		//g_conc.SetRGBmap((g_view.c_code%16+1)%16,g_view.c_code/16);
+		FillConsoleOutputAttribute(hConsole,g_view.c_code.col24, _ed_width, coord, &written);
 		EdmoveTo(i,0);
-		//cout<<fl;
+		g_view.c_code.tog();*/
 	}
 	void _edf_doc_display(const string& key){
 	    if(docMap.find(key) == docMap.end()){
@@ -260,7 +333,6 @@ namespace _ed_code{
         g_conc.SetRGBmap(15);
     }
 	void _ed_flash(){
-		//system("cls");
 		EdmoveTo(0,0);
 		bool f_dhzs = 0;
 		fc_zdbq = 1;
@@ -268,44 +340,29 @@ namespace _ed_code{
 		HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 		for(int i = 0;i<=_ed_line;i++){
 			int cl = i+_ed_top;
-			EdmoveTo(i,0);
-			COORD coord = {0, (SHORT)i}; // 第 i 行
-			DWORD written;
-			FillConsoleOutputCharacterA(hConsole, ' ', _ed_width, coord, &written);
-			FillConsoleOutputAttribute(hConsole,g_view.c_code, _ed_width, coord, &written);
-			g_conc.SetRGBmap(g_view.c_line);
-			//g_conc.SetRGBmap((g_view.c_code%16+1)%16,g_view.c_code/16);
-			EdmoveTo(i,0);
-			cout<<fl;
+			fillline(i);
 			if(v.size()-1<(unsigned int)cl)continue;
 			EdmoveTo(i,0);
-			//g_conc.SetRGBmap(7);
+			g_view.c_line.tog();
 			printf("%-3d",cl);
-			g_conc.SetRGBmap(g_view.c_code);
-			//cout<<v[cl]<<endl;
+			g_view.c_code.tog();
 			_ed_outcol(AnsiToUtf8(v[cl]),f_dhzs,cl==zz_x?cl:-1);
-			//_ed_outcol(v[cl],f_dhzs,i==zz_x?i:-1);
 		}
-		// 在最底部，根据最新关键字弹帮助
+		//帮助
 		if(g_doc!=""){
-		    //string key = g_ktip.substr(g_ktip.find("doc:")+4);
 		    _edf_doc_display(g_doc);
 		}
-		//_ed_draw_filetree(); //文件树 
 	}
 	void _edf_up(){
-		if(zz_x > 0){  // 确保不是第一行
-			zz_x--;  // 先移动到上一行
-			// 调整列位置不超过上一行的长度
+		if(zz_x > 0){
+			zz_x--;
 			if((unsigned int)zz_y > v[zz_x].size()){
 				zz_y = v[zz_x].size();
 			}
-			// 视口滚动逻辑
 			if(zz_x < _ed_top){
 				_ed_top = zz_x;
 			}
 		}
-		//printf("_edf_up zz:%d,%d top:%d line:%d\n",zz_x,zz_y,_ed_top,_ed_line);
 	}
 	void _edf_down(){
 		if((unsigned int)zz_x<v.size()-1){
@@ -397,7 +454,7 @@ namespace _ed_code{
 	}
 	LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 		if (msg == WM_CONTEXTMENU) {
-			return 0; // 完全阻止右键菜单
+			return 0;
 		}
 		return DefWindowProc(hWnd, msg, wParam, lParam);
 	}	
@@ -482,12 +539,12 @@ namespace _ed_code{
 		while(1){
 			c = _getch();
 			if(c==13){
-				v.insert(v.begin()+zz_x,s);
+				v.insert(v.begin()+zz_x,Utf8ToAnsi(s));
 				zz_x++;
 				s = "";
 			}
-			else if(c==27||c==0 ||c==0xE0){
-				if(s!="") v.insert(v.begin()+zz_x,s);
+			else if(c==27){
+				if(s!="") v.insert(v.begin()+zz_x,Utf8ToAnsi(s));
 				zz_x++;
 				s = "";
 				break;
@@ -506,8 +563,10 @@ namespace _ed_code{
 		zz_y = 0;
 		_ed_top = 0;
 	}
+	string g_save_encoding = "ansi";
+	string g_save_eol = "lf";
 	void _edf_save_file(){
-		system("cls");
+  		system("cls");
 		char c;
 		EdmoveTo(0,0);g_conc.SetRGBmap(135);
 		string fn = _ed_cpp::_ed_in_f;
@@ -520,12 +579,22 @@ namespace _ed_code{
 			fn = fn.substr(0,fn.find_last_of("."))+".cpp";
 		}
 		cout<<lan_str(224)<<":"<<fn<<endl;
-		ofstream ofs(fn.c_str());
-		_ed_cpp::_ed_in_f = fn;//自动设置 
-		for(int i = 0;i<(int)v.size();i++){
-			ofs<<v[i];
-			if((unsigned int)i!=v.size()-1) ofs<<"\n";
+		ofstream ofs(fn, ios::binary);
+		string eol = (g_save_eol=="crlf")? "\r\n" : "\n";
+		string data="";
+		for(size_t i=0;i<v.size();i++){
+		    data += v[i];
+		    if(i+1<v.size()) data += eol;
 		}
+		if(g_save_encoding=="ansi"){
+		    ofs<<(data);
+		}else if(g_save_encoding=="utf8"){
+		    ofs<<AnsiToUtf8(data);
+		}else if(g_save_encoding=="utf16"){
+		    wstring w = AnsiToUtf16(data);
+		    ofs.write((const char*)w.c_str(), w.size()*sizeof(wchar_t));
+		}
+		_ed_cpp::_ed_in_f = fn;//自动设置
 		ofs.close();
 		//file saved successfully
 		cout<<lan_str(225)<<endl;
@@ -546,7 +615,7 @@ namespace _ed_code{
 		file.close();
 		return lines;
 	}
-	void _edf_load_file(){
+	/*void _edf_load_file(){
 		system("cls");
 		clearInputBuffer();
 		char c;
@@ -561,6 +630,81 @@ namespace _ed_code{
 		zz_y = 0;
 		_ed_top = 0;
 		edt_pause();
+	}*/
+	vector<string> splitString(const string& s, const string& delim="\n") {
+	    vector<string> result;
+	    size_t start = 0;
+	    if(delim == "\r\n") {
+	        size_t pos = 0;
+	        while((pos = s.find("\r\n", start)) != string::npos){
+	            result.push_back(s.substr(start, pos - start));
+	            start = pos + 2; // 跳过\r\n
+	        }
+	        if(start <= s.size()) result.push_back(s.substr(start));
+	    }
+	    else { // 一般情况 \n
+	        size_t pos = 0;
+	        while((pos = s.find('\n', start)) != string::npos){
+	            string line = s.substr(start, pos - start);
+	            // 去掉行尾 \r （兼容 Windows 文本）
+	            if(!line.empty() && line.back()=='\r')
+	                line.pop_back();
+	            result.push_back(line);
+	            start = pos + 1; // 跳过\n
+	        }
+	        if(start <= s.size()) {
+	            string last = s.substr(start);
+	            if(!last.empty() && last.back()=='\r')
+	                last.pop_back();
+	            result.push_back(last);
+	        }
+	    }
+
+	    return result;
+	}
+	void _edf_load_file(){
+	    system("cls");
+	    clearInputBuffer();
+	    EdmoveTo(0,0); g_conc.SetRGBmap(135);
+	    cout<<lan_str(223)<<"\n";  // 输入文件名
+	    string fn;
+	    getline(cin,fn);
+	    _ed_cpp::_ed_in_f = fn;
+	    v.clear();
+	    //cout<<lan_str(242)<<"\n1.ANSI\n2.UTF8\n3.UTF16\n";
+	    //int ec=0;cin>>ec;cin.ignore();
+	    ifstream file(fn, ios::binary);
+	    if(!file.is_open()){ cerr<<"cannot open:"<<fn<<endl; edt_pause(); return; }
+	    stringstream buffer; buffer<<file.rdbuf();
+	    string data = buffer.str();
+	    file.close();
+	    if(g_save_encoding=="ansi"){ // ANSI
+	        v = splitString(data,g_save_eol=="crlf"?"\r\n":"\n");
+	    }else if(g_save_encoding=="utf8"){ // UTF8
+	        string ansi = Utf8ToAnsi(data);
+	        v = splitString(ansi,g_save_eol=="crlf"?"\r\n":"\n");
+	    }else if(g_save_encoding=="utf16"){ // UTF16
+	        wstring ws;
+	        ws.assign((wchar_t*)data.data(), data.size()/2);
+	        string ansi = Utf16ToAnsi(ws);
+	        v = splitString(ansi,g_save_eol=="crlf"?"\r\n":"\n");
+	    }
+	    zz_x=0;zz_y=0;_ed_top=0;
+	    runHooks("onOpen",fn);
+	    edt_pause();
+	}
+	void _edf_set_encoding(){
+	    system("cls"); clearInputBuffer();
+	    cout<<lan_str(242)<<"\n1.ANSI\n2.UTF8\n3.UTF16\n";
+	    int ec;cin>>ec;
+	    if(ec==1) g_save_encoding="ansi";
+	    if(ec==2) g_save_encoding="utf8";
+	    if(ec==3) g_save_encoding="utf16";
+	    cout<<lan_str(243)<<"\n1.CRLF(Windows)\n2.LF(Unix)\n";
+	    int e;cin>>e;
+	    if(e==1) g_save_eol="crlf"; else g_save_eol="lf";
+	    cout<<"result: "<<g_save_encoding<<", "<<g_save_eol<<endl;
+	    edt_pause();
 	}
 	void _edf_about(){
 		system("cls");
@@ -789,7 +933,7 @@ namespace _ed_code{
 		cout <<lan_str(213)<< cnt <<lan_str(214)<< "\n";
 		edt_pause();
 	}
-	void _edf_bycs(){//修改编译参数 
+	void _edf_bycs(){//修改参数
 		system("cls");
 		clearInputBuffer();
 		EdmoveTo(0,0);
@@ -925,7 +1069,7 @@ namespace _ed_code{
 			case '3':_edf_save_file();break;
 			case '4':_edf_load_file();break;
 			case '5':_ed_cpp::_ed_complete_file(0);break;
-			case '6':_ed_cpp::_ed_complete_file(1);break;
+			case '6':_ed_cpp::_ed_test(1);break;
 			case '7':_edf_about();break;
 			case '8':_edf_obfus();break;
 			case '9':_edf_curto();break;
@@ -939,12 +1083,14 @@ namespace _ed_code{
 			case 'h':_edf_bycs();break;
 			case 'i': _edf_find_regex(); break;
 			case 'j': _edf_replace_regex(); break;
+			case 'k': _edf_set_encoding(); break;
+			case 'l': _ed_cpp::_ed_test(0); break;
 		}
 		g_conc.SetRGBmap(15);
 		system("cls");
 	}
 	void put_ed_run(){
-		printf("line:%d row:%d top:%d size:%d tot:%d\n",zz_x,zz_y,_ed_top,_ed_line,v.size());
+		printf("line:%d row:%d top:%d size:%d tot:%d %s %s\n",zz_x,zz_y,_ed_top,_ed_line,v.size(),g_save_encoding.c_str(),g_save_eol.c_str());
 	}
 	void _edf_zhcn_display(vector<_sr_py> v,int p,string ci){
 		g_conc.SetRGBmap(8);
@@ -952,8 +1098,7 @@ namespace _ed_code{
 		fillline(_ed_line+2);
 		fillline(_ed_line+3);
 		fillline(_ed_line+4);
-		//fillline(_ed_line+5);
-		g_ktip = lan_str(201);//"home:上一页 end:下一页 escape:退出中文输入 0~9:选择 a-z:拼音输入 A-Z:直接输入";
+		g_ktip = lan_str(201);//home:上一页 end:下一页 escape:退出中文输入 0~9:选择 a-z:拼音输入 A-Z:直接输入
 		EdmoveTo(_ed_line+1,0);
 		cout<<fl<<endl<<fl<<endl;
 		EdmoveTo(_ed_line+1,0);
@@ -963,12 +1108,12 @@ namespace _ed_code{
 		EdmoveTo(_ed_line+3,0);
 		cout<<fl<<"\n"<<fl<<"\n"<<fl;
 		EdmoveTo(_ed_line+3,0);
-		string s = Utf8ToAnsi(lan_str(205));
+		string s = (lan_str(205));
 		for(int i = 0;i<10;i++){
 			int l = p*10+i;
-			if((unsigned int)l<v.size())s+=to_string(((i+1)%10))+"."+v[l].hz+" ";
+			if((unsigned int)l<v.size())s+=to_string(((i+1)%10))+"."+AnsiToUtf8(v[l].hz)+" ";
 		}
-		cout<<AnsiToUtf8(s)<<"\n"<<lan_str(202)<<p<<"/"<<v.size()/10<<"("<<lan_str(203)<<v.size()<<")";
+		cout<<(s)<<"\n"<<lan_str(202)<<p<<"/"<<v.size()/10<<"("<<lan_str(203)<<v.size()<<")";
 		cout<<lan_str(204)<<ci;
 		EdmoveTo(zz_x-_ed_top,zz_y+3);
 	}
@@ -1014,7 +1159,6 @@ namespace _ed_code{
 					for(char i : vp[0].hz){//add string to code
 						_edf_addch(i);
 					}
-					//str+=vp[0].hz;
 					vp.clear();
 					ci= "";
 					_ed_flash();
@@ -1040,7 +1184,8 @@ namespace _ed_code{
 			else if(c>='0'&&c<='9'){
 				int n = ((c-'0'-1+10)%10)+page*10;
 				if(vp.size()>(unsigned int)n){
-					for(char i : vp[n].hz){//add string to code
+                    string t = (vp[n].hz);
+					for(unsigned char i : t){//add string to code
 						_edf_addch(i);
 					}
 					//str+=vp[n].hz;
@@ -1066,6 +1211,8 @@ namespace _ed_code{
 		GetConsoleScreenBufferInfo(hConsole, &csbi);
 		clearInputBuffer();
 		clearOutputBuffer(NULL);
+		ResetFormat();
+		SetConsoleOutputCP(CP_UTF8);
 		EdmoveTo(0,0);
 		_ed_flash();
 		for(int i = 0;i<(int)v.size();i++){
@@ -1078,7 +1225,7 @@ namespace _ed_code{
 			v[i] = t;
 		}
 	}
-	string fldir = "C:\\Users\\A\\Desktop";
+	string fldir = "";
 	string getCurrentToken(){
 	    if(zz_x < 0 || (unsigned int)zz_x >= v.size()) return "";
 	    string &line = v[zz_x];
@@ -1093,7 +1240,7 @@ namespace _ed_code{
 	string findCompletion(const string& prefix){
 	    if(prefix.empty()) return "";
 	    for(auto &kv : mp_c_hs1){
-	        if(kv.first.rfind(prefix, 0) == 0){ // ????
+	        if(kv.first.rfind(prefix, 0) == 0){
 	            return kv.first;
 	        }
 	    }
@@ -1119,14 +1266,13 @@ namespace _ed_code{
 	int _ed_run(){ 
 		int c = _getch(); 
 		//cout<<c<<endl;
-		g_ktip = lan_str(200);//"esc:菜单 f1:插入 f2:输入中文 f3:刷新(可修复bug) f4:补全";
+		g_ktip = lan_str(200);//esc:菜单 f1:插入 f2:输入中文 f3:刷新(可修复bug) f4:补全
 		if(zz_x<0||zz_x>v.size()){
 			zz_x = _ed_top;
 		}
 		else{
 			if(c == 0 || c == 0xE0){
 				c = _getch();
-				//cout<<"="<<c<<endl;
 				switch(c){
 					case 72: _edf_up(); break;	// VK_UP
 					case 80: _edf_down(); break;  // VK_DOWN
@@ -1140,23 +1286,27 @@ namespace _ed_code{
 					case 0x3c: _edf_zhcn(); break;  // f2
 					case 0x3d: _edf_flash1(); break;  // f3
 					case 0x3e: doCompletion();break; //f4
+					case (0x3a+9):_ed_cpp::_ed_complete_file(0);break;//f9
+					case (0x3a+11):_ed_cpp::_ed_complete_file(1);break;//f11
 				}
 			}
 			else {
-				switch(c){
-					case 8: _edf_back(); break;  //backspace
-					case 13: _edf_enter(); break;//enter
-					case 27: _edf_escape(); break;	 //escape
-					default: _edf_addch(c,1); break;
-				}
+			    switch(c){
+			        case 8: _edf_back(); break;     // backspace
+			        case 13: _edf_enter(); break;   // enter
+			        case 27: _edf_escape(); break;  // escape
+			        default: _edf_addch(c,1); break;
+			    }
 			}
 		}
 		_ed_flash();
-		g_conc.SetRGBmap(8);
+		//g_conc.SetRGBmap(g_view.c_code.col24);
+		g_view.c_line.tog();
 	    fillline(_ed_line+1);
 	    fillline(_ed_line+2);
+	    fillline(_ed_line+3);
+	    fillline(_ed_line+4);
 		EdmoveTo(_ed_line+1,0);
-		g_conc.SetRGBmap(8);
 		put_ed_run();
 		cout<<g_ktip<<" doc:"<<g_doc;
 		EdmoveTo(zz_x-_ed_top,zz_y+3);
@@ -1167,6 +1317,7 @@ int main(){
 	cout<<"main:start console c++ ide\n";
 	SetConsoleTitle("Console C++ IDE");
 	SetConsoleOutputCP(CP_UTF8);
+	SetConsoleCP(CP_UTF8);
 	_ed_code::init();
 	_ed_cpp::init();
 	cwh::init();
@@ -1177,10 +1328,18 @@ int main(){
 	load_hooks();
 	elang::init();
 	//_ed_code::load_file_list(_ed_code::fldir);
-	cout<<"main:init all end\n";
-	cout<<"[lang] name="<<lan_str(100)<<" / "<<lan_str(101)<<endl;
+	//g_conc.SetRGB(255,100,0);
+	//cout<<"main:init all end\n";
+	cout<<"main:vt support = "<<g_vt_support<<endl;
+	if(g_vt_support==0){
+		cout<<lan_str(244)<<endl;
+	}
+	PrintGradientText("main:init all end\n",217,192,80,53,212,217);
+	PrintGradientText("Console C++ IDE by hetianyu313\n",217,192,80,53,212,217);
+	g_view.c_line.tog();
 	edt_pause();
 	system("cls");
+	//Sleep(500);
 	_ed_code::_ed_flash();
 	while(1){
 		_ed_code::_ed_run();

@@ -48,6 +48,7 @@ void load_language(const string& langCode){
         langMap[id] = text;
     }
     cout<<"[lang] loaded "<<langMap.size()<<" entries from "<<fn<<endl;
+    cout<<"[lang] name="<<lan_str(100)<<" / "<<lan_str(101)<<endl;
 }
 void load_hooks() {
     hooks.clear();
@@ -84,9 +85,32 @@ void runHooks(const string& event, const string& fname){
         }
     }
 }
+bool g_vt_support = 0;//support visual terminal
+//font mode
+EDITOR void TogBold(bool b){
+    if(g_vt_support) cout << (b ? "\033[1m" : "\033[22m");
+}
+EDITOR void TogItalic(bool b){
+    if(g_vt_support) cout << (b ? "\033[3m" : "\033[23m");
+}
+EDITOR void TogUnderline(bool b){
+    if(g_vt_support) cout << (b ? "\033[4m" : "\033[24m");
+}
+EDITOR void ResetFormat(){
+    if(g_vt_support) cout << "\033[0m";
+}
 //init
 EDITOR void Edinit(){
-	hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    DWORD mode = 0;
+    if(GetConsoleMode(hConsole, &mode)){
+        DWORD newMode = mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+        if(SetConsoleMode(hConsole, newMode)){
+            g_vt_support = true;
+        } else {
+            g_vt_support = false;
+        }
+    }
 }
 // 移动光标到指定位置
 EDITOR void EdmoveTo(int x, int y) {
@@ -170,5 +194,14 @@ EDITOR void EdgetConsoleSize(int& width, int& height) {
     GetConsoleScreenBufferInfo(hConsole, &csbi);
     width = csbi.srWindow.Right - csbi.srWindow.Left + 1;
     height = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
+}
+//输出网址
+EDITOR void EdWriteUrl(const std::string& displayName, const std::string& url) {
+    if (g_vt_support) {
+        cout << "\033]8;;" << url << "\a" << displayName << "\033]8;;\a";
+    } else {
+        // 如果控制台不支持，就退化为常规输出
+        cout << displayName << " (" << url << ")";
+    }
 }
 #endif //EDITORAPI_INC

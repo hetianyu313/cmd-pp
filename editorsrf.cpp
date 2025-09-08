@@ -24,7 +24,7 @@ namespace srf{
 	int init(){
 		cout<<"srf.init:load py\n";
 		py.clear();
-		string fn = exedir_get()+"setting\\pinyin.ini";
+		string fn = exedir_get()+"setting\\pinyin.ini";//coding:ANSI
 		cout<<"srf.init:load from "<<fn<<"\n";
 		ifstream ifs(fn.c_str());
 		string a="",b="";

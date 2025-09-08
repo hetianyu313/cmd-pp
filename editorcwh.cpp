@@ -144,7 +144,7 @@ namespace cwh{
 	            if (!currentWord.empty()) {
 	                if (currentLine.empty()) {
 	                    currentLine = currentWord;
-	                } else if (currentLine.length() + 1 + currentWord.length() <= maxWidth) {
+	                } else if (currentLine.length() + 1 + currentWord.length() <= (unsigned int)maxWidth) {
 	                    currentLine += " " + currentWord;
 	                } else {
 	                    lines.push_back(currentLine);
@@ -166,7 +166,7 @@ namespace cwh{
 	    if (!currentWord.empty()) {
 	        if (currentLine.empty()) {
 	            currentLine = currentWord;
-	        } else if (currentLine.length() + 1 + currentWord.length() <= maxWidth) {
+	        } else if (currentLine.length() + 1 + currentWord.length() <= (unsigned int)maxWidth) {
 	            currentLine += " " + currentWord;
 	        } else {
 	            lines.push_back(currentLine);
@@ -400,7 +400,7 @@ namespace cwh{
 	            ConsoleColor textColor = BRIGHT_WHITE;
 	            ConsoleColor bgColor = GRAY;
 	            
-	            if (i == selected) {
+	            if ((int)i == (int)selected) {
 	                textColor = BLACK;
 	                bgColor = BRIGHT_YELLOW;
 	            }

@@ -1,31 +1,70 @@
 #include<bits/stdc++.h>
-#define cmdcol unsigned short
 #include"editorcpp.cpp"
 #include"editorapi.cpp"
 #include"editorrgb.cpp"
 #pragma once
 using namespace std;
 //editorview.cpp
+#define cmdcol unsigned short
+struct cmdcolEx{
+	short r,g,b;//front
+	short r1,g1,b1;//background
+	int col24;
+	bool sup_24=0;
+	void tog(){
+		if(sup_24){
+			g_conc.SetRGB(r,g,b,0);
+			g_conc.SetRGB(r1,g1,b1,1);
+		}
+		else{
+			g_conc.SetRGBmap(col24);
+		}
+	}
+};
+cmdcolEx input_cmdcolEx(ifstream &ifs){
+	int a;
+	ifs>>a;
+	if(a==-1){
+		cmdcolEx rs;
+		ifs>>rs.r>>rs.g>>rs.b>>rs.r1>>rs.g1>>rs.b1;
+		rs.sup_24=1;
+		rs.col24=15;
+		printf("input_cmdcolEx:sup24 %d %d %d-%d %d %d\n",rs.r,rs.g,rs.b,rs.r1,rs.g1,rs.b1);
+		return rs;
+	}
+	else{
+		cmdcolEx rs;
+		rs.sup_24=0;
+		rs.col24=a;
+		printf("input_cmdcolEx:not sup24 %d\n",rs.col24);
+		return rs;
+	}
+}
 class _ed_view{
 public:
-	cmdcol c_func;//1-
-	cmdcol c_type;//2-
-	cmdcol c_line;//3-
-	cmdcol c_code;//4-
-	cmdcol c_str;//5-
-	cmdcol c_zs;//6-
-	cmdcol c_def;//7-
-	cmdcol c_sign;//8-
-	cmdcol c_num;//9-
+	cmdcolEx c_func;//1-
+	cmdcolEx c_type;//2-
+	cmdcolEx c_line;//3-
+	cmdcolEx c_code;//4-
+	cmdcolEx c_str;//5-
+	cmdcolEx c_zs;//6-
+	cmdcolEx c_def;//7-
+	cmdcolEx c_sign;//8-
+	cmdcolEx c_num;//9-
+	bool b_func;
+	bool b_type;
+	bool b_zs;
+	bool i_func;
+	bool i_type;
+	bool i_zs;
+	bool u_func;
+	bool u_type;
+	bool u_zs;
 	string v_name;
 	string v_auth;
 	string v_about;
 };
 _ed_view g_view = {
-	7,9,7,15,1,3,2,12,5,
-	"Classic Plus",
-	"__builtin__",
-	"Dev-C++ 5.11"
 };//builtin view
 string exedir_get(){
 	return exedir;
@@ -74,7 +113,7 @@ namespace eview{
 		string fn = exedir_get()+"setting\\"+s+".view";
 		cout<<"load from:"<<fn<<endl;
 		ifstream ifs(fn.c_str());
-		ifs>>g_view.c_func>>
+		/*ifs>>g_view.c_func>>
 		g_view.c_type>>
 		g_view.c_line>>
 		g_view.c_code>>
@@ -82,13 +121,25 @@ namespace eview{
 		g_view.c_zs>>
 		g_view.c_def>>
 		g_view.c_sign>>
-		g_view.c_num;
+		g_view.c_num;*/
+		g_view.c_func=input_cmdcolEx(ifs);
+		g_view.c_type=input_cmdcolEx(ifs);
+		g_view.c_line=input_cmdcolEx(ifs);
+		g_view.c_code=input_cmdcolEx(ifs);
+		g_view.c_str=input_cmdcolEx(ifs);
+		g_view.c_zs=input_cmdcolEx(ifs);
+		g_view.c_def=input_cmdcolEx(ifs);
+		g_view.c_sign=input_cmdcolEx(ifs);
+		g_view.c_num=input_cmdcolEx(ifs);
 		//getchar();
 		string tmp = "";
 		getline(ifs,tmp);
 		getline(ifs,g_view.v_name);
 		getline(ifs,g_view.v_auth);
 		getline(ifs,g_view.v_about);
+		ifs>>g_view.b_func>>g_view.b_type>>g_view.b_zs;//加粗设置
+		ifs>>g_view.i_func>>g_view.i_type>>g_view.i_zs;//斜体设置
+		ifs>>g_view.u_func>>g_view.u_type>>g_view.u_zs;//下划线设置
 		ifs.close();
 		cout<<"_ev_loadview:loaded view file\n";
 	}
@@ -140,4 +191,15 @@ namespace eview{
 		}
 	}
 }
-
+/*
+testing code:
+"string"
+{};
++ - * / ^ | &
+//zhushi
+sort((()));
+return 0;
+0xff
+#define mop int
+string s;
+*/
