@@ -11,6 +11,7 @@
 #include"editorview.cpp"
 #include"editorlang.cpp"
 #include"editorsrf.cpp"
+#include"editorxgj.cpp"
 using namespace std;
 //-std=c++14 -O2 -s -m32
 namespace _ed_code{
@@ -332,12 +333,13 @@ namespace _ed_code{
         }
         g_conc.SetRGBmap(15);
     }
+    HANDLE hConsole;
 	void _ed_flash(){
+		EdShowConsoleCursor(0);
 		EdmoveTo(0,0);
 		bool f_dhzs = 0;
 		fc_zdbq = 1;
 		g_doc.clear();
-		HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 		for(int i = 0;i<=_ed_line;i++){
 			int cl = i+_ed_top;
 			fillline(i);
@@ -352,6 +354,7 @@ namespace _ed_code{
 		if(g_doc!=""){
 		    _edf_doc_display(g_doc);
 		}
+		EdShowConsoleCursor(1);
 	}
 	void _edf_up(){
 		if(zz_x > 0){
@@ -709,7 +712,11 @@ namespace _ed_code{
 	void _edf_about(){
 		system("cls");
 		clearInputBuffer();
-		cout<<"CMD++\nby HeTianYu313 (Github.com)\nLanguage:C++(MinGW64)\n";
+		cout<<"CMD++\nby HeTianYu\nLanguage:C++ (MinGW64)\n";
+		EdWriteUrl("GithubURL","https://github.com/hetianyu313/cmd-pp");
+		cout<<" hetianyu313"<<endl;
+		EdWriteUrl("Zfworld_123oj","http://123.60.188.246");
+		cout<<endl;
 		edt_pause();
 	}
 	void _edf_obfus(){
@@ -1056,11 +1063,12 @@ namespace _ed_code{
 		//"0.back\n1.insert\n2.exit cmd++\n3.save file\n4.load file\n5.complete\n6.complete and run\n7.about\n";
 		//"8.obfuscate code\n9.move cursor\na.copy to clipboard\nb.set view of IDE\n";
 		//"c.code style\nd.find first\ne.find\nf.replace\ng.set language of IDE\n";
-		//"h.set compete info\n";
+		//"h.set compete info m.tool\n";
 		cout<<lan_str(231)<<"\n";
 		cout<<lan_str(232)<<"\n";
 		cout<<lan_str(233)<<"\n";
 		cout<<lan_str(241)<<"\n";
+		cout<<lan_str(245)<<"\n";
 		int c = _getch();
 		switch (c){
 			case '0':return;break;
@@ -1085,6 +1093,7 @@ namespace _ed_code{
 			case 'j': _edf_replace_regex(); break;
 			case 'k': _edf_set_encoding(); break;
 			case 'l': _ed_cpp::_ed_test(0); break;
+			case 'm': xgj::main(v); break;
 		}
 		g_conc.SetRGBmap(15);
 		system("cls");
@@ -1146,7 +1155,7 @@ namespace _ed_code{
 				}
 				else{
 					switch(c){
-						case 72: _edf_up();_ed_flash(); break;	// VK_UP
+	  					case 72: _edf_up();_ed_flash(); break;	// VK_UP
 						case 80: _edf_down();_ed_flash(); break;  // VK_DOWN
 						case 75: _edf_left();_ed_flash(); break;  // VK_LEFT
 						case 77: _edf_right();_ed_flash(); break; // VK_RIGHT
@@ -1203,7 +1212,6 @@ namespace _ed_code{
 	}
 	void _edf_flash1(){
 		system("cls");
-		HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 		DWORD mode;
 		GetConsoleMode(hConsole, &mode);
 		SetConsoleMode(hConsole, ENABLE_PROCESSED_INPUT | ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT);
@@ -1263,63 +1271,67 @@ namespace _ed_code{
 	    line.insert(start, comp);
 	    zz_y = start + comp.size();
 	}
-	int _ed_run(){ 
-		int c = _getch(); 
-		//cout<<c<<endl;
-		g_ktip = lan_str(200);//esc:菜单 f1:插入 f2:输入中文 f3:刷新(可修复bug) f4:补全
-		if(zz_x<0||zz_x>v.size()){
-			zz_x = _ed_top;
-		}
-		else{
-			if(c == 0 || c == 0xE0){
-				c = _getch();
-				switch(c){
-					case 72: _edf_up(); break;	// VK_UP
-					case 80: _edf_down(); break;  // VK_DOWN
-					case 75: _edf_left(); break;  // VK_LEFT
-					case 77: _edf_right(); break; // VK_RIGHT
-					case 71: _edf_home(); break; // home
-					case 79: _edf_end(); break;  // end
-					case 0x49: _edf_pgup(); break; // pgup
-					case 0x51: _edf_pgdn(); break;  // pgdn
-					case 0x3b: _edf_insert(); break;  // f1
-					case 0x3c: _edf_zhcn(); break;  // f2
-					case 0x3d: _edf_flash1(); break;  // f3
-					case 0x3e: doCompletion();break; //f4
-					case (0x3a+9):_ed_cpp::_ed_complete_file(0);break;//f9
-					case (0x3a+11):_ed_cpp::_ed_complete_file(1);break;//f11
-				}
-			}
-			else {
-			    switch(c){
-			        case 8: _edf_back(); break;     // backspace
-			        case 13: _edf_enter(); break;   // enter
-			        case 27: _edf_escape(); break;  // escape
-			        default: _edf_addch(c,1); break;
-			    }
-			}
-		}
-		_ed_flash();
-		//g_conc.SetRGBmap(g_view.c_code.col24);
-		g_view.c_line.tog();
+	HANDLE hInput;
+	int _ed_runEx(){
+	    INPUT_RECORD record;
+	    DWORD read;
+	    g_ktip = lan_str(200);
+	    while (true) {
+	        ReadConsoleInput(hInput, &record, 1, &read);
+	        if (record.EventType == KEY_EVENT && record.Event.KeyEvent.bKeyDown) {
+	            int c = record.Event.KeyEvent.wVirtualKeyCode;
+	            switch (c) {
+	                case VK_UP:    _edf_up(); break;
+	                case VK_DOWN:  _edf_down(); break;
+	                case VK_LEFT:  _edf_left(); break;
+	                case VK_RIGHT: _edf_right(); break;
+	                case VK_HOME:  _edf_home(); break;
+	                case VK_END:   _edf_end(); break;
+	                case VK_PRIOR: _edf_pgup(); break;  // PageUp
+	                case VK_NEXT:  _edf_pgdn(); break;  // PageDown
+	                case VK_F1:    _edf_insert(); break;
+	                case VK_F2:    _edf_zhcn(); break;
+	                case VK_F3:    _edf_flash1(); break;
+	                case VK_F4:    doCompletion(); break;
+	                case VK_F9:    _ed_cpp::_ed_test(0); break;
+	                case VK_F11:   _ed_cpp::_ed_test(1); break;
+	                case VK_ESCAPE: _edf_escape(); break;
+	                case VK_RETURN: _edf_enter(); break;
+	                case VK_BACK:   _edf_back(); break;
+	                default: {
+	                    char ascii = record.Event.KeyEvent.uChar.AsciiChar;
+	                    if ((ascii >= 32 && ascii <= 126)||ascii=='\t') {
+	                        _edf_addch(ascii, 1);
+	                    }
+	                } break;
+	            }
+	            break;
+	        }
+	    }
+	    _ed_flash();
+	    g_view.c_line.tog();
 	    fillline(_ed_line+1);
 	    fillline(_ed_line+2);
 	    fillline(_ed_line+3);
 	    fillline(_ed_line+4);
-		EdmoveTo(_ed_line+1,0);
-		put_ed_run();
-		cout<<g_ktip<<" doc:"<<g_doc;
-		EdmoveTo(zz_x-_ed_top,zz_y+3);
-		return 0;
+	    EdmoveTo(_ed_line+1,0);
+	    put_ed_run();
+	    cout << g_ktip << " doc:" << g_doc;
+	    EdmoveTo(zz_x-_ed_top, zz_y+3);
+	    return 0;
 	}
 }
 int main(){
 	cout<<"main:start console c++ ide\n";
 	SetConsoleTitle("Console C++ IDE");
-	SetConsoleOutputCP(CP_UTF8);
-	SetConsoleCP(CP_UTF8);
+	_ed_code::hInput = GetStdHandle(STD_INPUT_HANDLE);
+	_ed_code::hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 	_ed_code::init();
 	_ed_cpp::init();
+	cout<<"main:display system info\n";
+	system((exedir+"\\tool\\editorsys.exe").c_str());
+	SetConsoleOutputCP(CP_UTF8);
+	SetConsoleCP(CP_UTF8);
 	cwh::init();
 	eview::init();
 	srf::init();
@@ -1327,9 +1339,7 @@ int main(){
 	_ed_code::load_docmap();
 	load_hooks();
 	elang::init();
-	//_ed_code::load_file_list(_ed_code::fldir);
-	//g_conc.SetRGB(255,100,0);
-	//cout<<"main:init all end\n";
+	xgj::init();
 	cout<<"main:vt support = "<<g_vt_support<<endl;
 	if(g_vt_support==0){
 		cout<<lan_str(244)<<endl;
@@ -1342,7 +1352,7 @@ int main(){
 	//Sleep(500);
 	_ed_code::_ed_flash();
 	while(1){
-		_ed_code::_ed_run();
+		_ed_code::_ed_runEx();
 	}
 	return 0;
 }

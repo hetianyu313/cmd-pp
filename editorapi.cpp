@@ -1,5 +1,6 @@
 #include<bits/stdc++.h>
 #include<windows.h>
+#include<conio.h>
 #define EDITOR
 using namespace std;
 //editorapi.cpp
@@ -28,6 +29,15 @@ void edt_pause(){
 string lan_cstr(int num){
     return lan_cstr(num).c_str();
 }
+EDITOR string replaceall(string s, const string& s1, const string& s2) {
+    if (s1.empty()) return s;  // 避免无限循环
+    size_t pos = 0;
+    while ((pos = s.find(s1, pos)) != string::npos) {
+        s.replace(pos, s1.length(), s2);
+        pos += s2.length();  // 跳过已替换部分，避免重复处理
+    }
+    return s;
+}
 void load_language(const string& langCode){
     langMap.clear();
     //currentLang = langCode;
@@ -45,7 +55,8 @@ void load_language(const string& langCode){
 
         int id = stoi(line.substr(0, pos));
         string text = line.substr(pos+1);
-        langMap[id] = text;
+        string text1 = replaceall(text,"\\033","\033");
+        langMap[id] = text1;
     }
     cout<<"[lang] loaded "<<langMap.size()<<" entries from "<<fn<<endl;
     cout<<"[lang] name="<<lan_str(100)<<" / "<<lan_str(101)<<endl;
@@ -175,6 +186,18 @@ EDITOR void EdwriteToConsole(int x, int y, const std::string& text) {
         &charsWritten
     );
 }
+EDITOR void EdShowConsoleCursor(bool show) {
+    CONSOLE_CURSOR_INFO cursorInfo;
+    GetConsoleCursorInfo(hConsole, &cursorInfo);
+    cursorInfo.bVisible = show;
+    SetConsoleCursorInfo(hConsole, &cursorInfo);
+}
+EDITOR void EdSetCursorSize(DWORD size) {
+    CONSOLE_CURSOR_INFO cursorInfo;
+    GetConsoleCursorInfo(hConsole, &cursorInfo);
+    cursorInfo.dwSize = size;
+    SetConsoleCursorInfo(hConsole, &cursorInfo);
+}
 // 光标左移n格（相对移动）
 EDITOR void EdmoveLeft(int n) {
     COORD current = EdgetPosition();
@@ -194,6 +217,32 @@ EDITOR void EdgetConsoleSize(int& width, int& height) {
     GetConsoleScreenBufferInfo(hConsole, &csbi);
     width = csbi.srWindow.Right - csbi.srWindow.Left + 1;
     height = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
+}
+// 设置控制台窗口大小
+EDITOR void EdSetConsoleSize(int width, int height) {
+    COORD coord = {static_cast<SHORT>(width), static_cast<SHORT>(height)};
+    SMALL_RECT rect = {0, 0, static_cast<SHORT>(width-1), static_cast<SHORT>(height-1)};
+
+    SetConsoleScreenBufferSize(hConsole, coord);
+    SetConsoleWindowInfo(hConsole, TRUE, &rect);
+}
+// 密码输入(显示*)
+EDITOR string EdGetPassword(const string& prompt = "Password: ") {
+    cout << prompt;
+    string password;
+    char ch;
+    while((ch = _getch()) != '\r') {
+        if(ch == '\b' && !password.empty()) {
+            cout << "\b \b";
+            password.pop_back();
+        }
+        else if(isprint(ch)) {
+            cout << '*';
+            password += ch;
+        }
+    }
+    cout << endl;
+    return password;
 }
 //输出网址
 EDITOR void EdWriteUrl(const std::string& displayName, const std::string& url) {
