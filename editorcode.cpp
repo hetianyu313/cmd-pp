@@ -12,6 +12,7 @@
 #include"editorlang.cpp"
 #include"editorsrf.cpp"
 #include"editorxgj.cpp"
+#include"tool\editorfile.cpp"
 using namespace std;
 //-std=c++14 -O2 -s -m32
 namespace _ed_code{

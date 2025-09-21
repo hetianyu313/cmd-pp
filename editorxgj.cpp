@@ -3,6 +3,8 @@
 #include "editorapi.cpp"
 #include "editorchar.cpp"
 #include "editorview.cpp"
+#include "tool\editorfile.cpp"
+
 //editorxgj.cpp 2025.09
 using namespace std;
 namespace xgj{
@@ -519,11 +521,13 @@ namespace xgj{
         auto p = empty[rand()%empty.size()];
         board2048[p.first][p.second] = (rand()%10==0)?4:2;
     }
+	bool tk_usedai = 0;
     // 绘制棋盘
-    void drawBoard() {
+    void drawBoard(string details,int stepc = 0) {
         system("cls");
         //clearInputBuffer();
-        EdmoveTo(0,0);
+        //EdmoveTo(0,0);
+        //clearOutputBuffer(NULL);
         cout<<"=== Console 2048 ===\n\n";
         for(int i=0;i<4;i++){
             for(int j=0;j<4;j++){
@@ -540,7 +544,16 @@ namespace xgj{
             cout<<"\n\n";
         }
         g_conc.SetRGBmap(7);
-        cout<<"[^ V < >]Move\n[ESC]Back IDE\n";
+        cout<<"[^ V < >]Move\n[ESC]Back IDE\n[TAB]Auto step\n";
+		if(stepc){
+			cout<<"step count:"<<stepc<<"\n";
+		}
+        g_conc.SetRGBmap(14);
+        if(tk_usedai) cout<<"[Auto step used]\n";
+        if(details.size()>0){
+        	g_conc.SetRGBmap(7);
+        	cout<<details;
+		}
         g_conc.SetRGBmap(15);
     }
     // 向左移动
@@ -582,18 +595,189 @@ namespace xgj{
         for(int j=0;j<4;j++)for(int i=0;i<3;i++) if(board2048[i][j]==board2048[i+1][j]) return true;
         return false;
     }
+	int countEmpty() {
+	    int cnt=0;
+	    for(int i=0;i<4;i++)
+	        for(int j=0;j<4;j++)
+	            if(board2048[i][j]==0) cnt++;
+	    return cnt;
+	}
+	int smoothness() {
+	    int score=0;
+	    for(int i=0;i<4;i++){
+	        for(int j=0;j<4;j++){
+	            if(board2048[i][j]==0) continue;
+	            if(j+1<4 && board2048[i][j+1]!=0){
+	                score -= abs(board2048[i][j]-board2048[i][j+1]);
+	            }
+	            if(i+1<4 && board2048[i+1][j]!=0){
+	                score -= abs(board2048[i][j]-board2048[i+1][j]);
+	            }
+	        }
+	    }
+	    return score;
+	}
+	int maxInCorner() {
+	    int maxTile=0;
+	    int posi=0,posj=0;
+	    for(int i=0;i<4;i++)
+	        for(int j=0;j<4;j++)
+	            if(board2048[i][j]>maxTile){
+	                maxTile=board2048[i][j]; posi=i; posj=j;
+	            }
+	    if((posi==0||posi==3) && (posj==0||posj==3)) return maxTile;
+	    return 0;
+	}
+	int monotonicity() {
+	    int score=0;
+	    for(int i=0;i<4;i++){
+	        int inc=0, dec=0;
+	        for(int j=0;j<3;j++){
+	            if(board2048[i][j]>board2048[i][j+1]) dec+=board2048[i][j]-board2048[i][j+1];
+	            else inc+=board2048[i][j+1]-board2048[i][j];
+	        }
+	        score -= min(inc,dec);
+	    }
+	    for(int j=0;j<4;j++){
+	        int inc=0, dec=0;
+	        for(int i=0;i<3;i++){
+	            if(board2048[i][j]>board2048[i+1][j]) dec+=board2048[i][j]-board2048[i+1][j];
+	            else inc+=board2048[i+1][j]-board2048[i][j];
+	        }
+	        score -= min(inc,dec);
+	    }
+	    return -score;
+	}
+	struct EvalDetail {
+	    int empty;
+	    int smooth;
+	    int corner;
+	    int mono;
+	    int maxTile;
+	    double total;
+	};
+
+	EvalDetail evaluateBoardDetail() {
+	    EvalDetail ed;
+	    ed.empty = countEmpty();
+	    ed.smooth = smoothness();
+	    ed.corner = maxInCorner();
+	    ed.mono = monotonicity();
+	    ed.maxTile=0;
+	    for(int i=0;i<4;i++)for(int j=0;j<4;j++)
+	        ed.maxTile = max(ed.maxTile, board2048[i][j]);
+
+	    ed.total = ed.empty * 1000.0
+	             + ed.smooth * 0.5
+	             + ed.corner * 5.0
+	             + ed.mono * 1.0
+	             + ed.maxTile * 1.0;
+
+	    return ed;
+	}
+	double evaluateBoard() {
+	    /*int emptyCount = countEmpty();
+	    int smooth = smoothness();
+	    int corner = maxInCorner();
+	    int mono = monotonicity();
+	    int maxTile=0;
+	    for(int i=0;i<4;i++)for(int j=0;j<4;j++)
+	        maxTile = max(maxTile, board2048[i][j]);
+	    double score = emptyCount * 1000.0
+	                 + smooth * 0.5
+	                 + corner * 5.0
+	                 + mono * 1.0
+	                 + maxTile * 1.0;
+	    return score;*/
+	    return evaluateBoardDetail().total;
+	}
+	double searchExpectimax(int depth, bool isPlayer){
+	    if(depth==0 || !canMove()) return evaluateBoard();
+
+	    if(isPlayer){
+	        double best=-1e9;
+	        int backup[4][4]; memcpy(backup, board2048, sizeof(board2048));
+	        vector<function<bool()>> moves = {moveLeft, moveRight, moveUp, moveDown};
+	        for(int d=0; d<4; d++){
+	            memcpy(board2048, backup, sizeof(board2048));
+	            bool moved = moves[d]();
+	            if(!moved) continue;
+	            double val = searchExpectimax(depth-1,false);
+	            best = max(best,val);
+	        }
+	        memcpy(board2048, backup, sizeof(board2048));
+	        return best;
+	    }else{
+	        vector<pair<int,int>> empty;
+	        for(int i=0;i<4;i++)
+	            for(int j=0;j<4;j++)
+	                if(board2048[i][j]==0) empty.push_back({i,j});
+
+	        if(empty.empty()) return evaluateBoard();
+
+	        double total=0;
+	        int backup[4][4]; memcpy(backup, board2048, sizeof(board2048));
+			for(const auto &p : empty){
+			    int r = p.first;
+			    int c = p.second;
+			    board2048[r][c] = 2;
+			    total += 0.9 * searchExpectimax(depth-1,true);
+			    board2048[r][c] = 4;
+			    total += 0.1 * searchExpectimax(depth-1,true);
+			    board2048[r][c] = 0;
+			}
+	        memcpy(board2048, backup, sizeof(board2048));
+	        return total;
+	    }
+	}
+	int bestMoveExpectimax(int depth, string &S){
+	    vector<function<bool()>> moves = {moveLeft, moveRight, moveUp, moveDown};
+	    int backup[4][4]; memcpy(backup, board2048, sizeof(board2048));
+
+	    double best=-1e9;
+	    int bestDir=-1;
+	    stringstream ss;
+	    char t[260];
+
+	    for(int d=0; d<4; d++){
+	        memcpy(board2048, backup, sizeof(board2048));
+	        bool moved = moves[d]();
+	        if(!moved){
+	            ss<<"dir="<<d<<" invalid\n";
+	            continue;
+	        }
+	        double val = searchExpectimax(depth-1,false);
+
+	        // 保存详细当前局面评分
+	        EvalDetail ed = evaluateBoardDetail();
+	        memset(t,0,sizeof t);
+	        sprintf(t,"dir=%d empty=%d smooth=%d corner=%d mono=%d maxtile=%d eval=%.2lf\n",d,ed.empty,ed.smooth,ed.corner,ed.mono,ed.maxTile,val);
+	        ss<<(string)t;
+	        if(val>best){
+	            best=val;
+	            bestDir=d;
+	        }
+	    }
+	    memcpy(board2048, backup, sizeof(board2048));
+	    S = ss.str();
+	    return bestDir;
+	}
 	// 主循环 (用 _getch 控制)
 	void game_2048() {
+	    g_conc.SetRGBmap(15);
 	    system("cls");
 	    clearInputBuffer();
 	    EdmoveTo(0,0);
-	    g_conc.SetRGBmap(15);
 	    memset(board2048,0,sizeof(board2048));
 	    srand(time(0));
 	    addRandomTile();
 	    addRandomTile();
+	    tk_usedai = 0;
+		string details = "";
+	    int stepc = 0;
 	    while(true){
-	        drawBoard();
+	        drawBoard(details,stepc);
+	    	details = "";
 	        if(!canMove()){
 	            cout<<"\nGame Over! Press ESC return...\n";
 	            while(true){
@@ -603,6 +787,17 @@ namespace xgj{
 	        }
 	        int c = _getch();
 	        if(c==27) return; // ESC
+			if(c==9){ // Tab
+			    tk_usedai=1;
+			    int dir = bestMoveExpectimax(4, details);
+			    bool moved=false;
+			    if(dir==0) moved=moveLeft();
+			    else if(dir==1) moved=moveRight();
+			    else if(dir==2) moved=moveUp();
+			    else if(dir==3) moved=moveDown();
+			    if(moved) addRandomTile();
+			    if(moved) stepc++;
+			}
 	        if(c==0 || c==0xE0){ // 扩展键 (方向键)
 	            c = _getch();    // 读取扫描码
 	            bool moved=false;
@@ -611,8 +806,51 @@ namespace xgj{
 	            if(c==72) moved=moveUp();     // ↑
 	            if(c==80) moved=moveDown();   // ↓
 	            if(moved) addRandomTile();
+	            if(moved) stepc++;
 	        }
 	    }
+	}
+	bool u_runProcess(const string &commandLine) {
+	    STARTUPINFOA si;
+	    PROCESS_INFORMATION pi;
+	    ZeroMemory(&si, sizeof(si));
+	    si.cb = sizeof(si);
+	    ZeroMemory(&pi, sizeof(pi));
+	    // 注意：CreateProcess 需要可写缓冲区
+	    char *cmd = _strdup(commandLine.c_str());
+	    BOOL success = CreateProcessA(
+	        NULL,   // 可执行文件路径（NULL=命令行第一个 token）
+	        cmd,    // 命令行（必须可写）
+	        NULL,   // 进程安全属性
+	        NULL,   // 线程安全属性
+	        TRUE,   // 是否继承句柄
+	        CREATE_NEW_CONSOLE ,      // 创建选项
+	        NULL,   // 环境变量
+	        NULL,   // 当前目录
+	        &si,    // 启动参数
+	        &pi     // 进程信息
+	    );
+	    free(cmd);
+	    if (!success) {
+	        cerr << "CreateProcess failed. Error code: " << GetLastError() << endl;
+	        return false;
+	    }
+	    CloseHandle(pi.hProcess);
+	    CloseHandle(pi.hThread);
+	    return true;
+	}
+	void u_copy_brain(){
+		clearInputBuffer();
+		system("cls");
+		EdmoveTo(0,0);g_conc.SetRGBmap(135);
+		cout<<lan_str(618)<<endl;
+		edt_pause();
+		string fn = exedir+"tool\\editorbin.exe";
+		int r = u_runProcess(fn);
+		if(r==0){
+			cout<<"\nError:starting process\n";
+			edt_pause();
+		}
 	}
 	void main(const vector<string> &ed_lines={""}){
 		clearInputBuffer();
@@ -635,6 +873,9 @@ namespace xgj{
 		}
 		else if(i==5){
 			game_2048();
+		}
+		else if(i==6){
+			u_copy_brain();
 		}
 	}
 }
