@@ -1,0 +1,8 @@
+WELCOME TO USE CONSOLE CPP IDE
+web https://github.com/hetianyu313/cmd-pp/
+by hetianyu313
+==测试==
+\033[1m粗体\033[22m
+\033[3m斜体\033[23m
+\033[4m下划线\033[24m
+真彩色24位:\033[48;2;165;165;165mHELLO\033[0m
