@@ -9,7 +9,7 @@ using namespace std;
 struct cmdcolEx{
 	short r,g,b;//front
 	short r1,g1,b1;//background
-	int col24;
+	short col24;
 	bool sup_24=0;
 	void tog(){
 		if(sup_24){
@@ -51,18 +51,37 @@ public:
 	cmdcolEx c_def;//7-
 	cmdcolEx c_sign;//8-
 	cmdcolEx c_num;//9-
-	bool b_func;
+	bool b_func;//BOLD
 	bool b_type;
 	bool b_zs;
-	bool i_func;
+	bool i_func;//ITALIC
 	bool i_type;
 	bool i_zs;
-	bool u_func;
+	bool u_func;//UNDERLINE
 	bool u_type;
 	bool u_zs;
 	string v_name;
 	string v_auth;
 	string v_about;
+	string s_16map;
+	_ed_view(){
+		s_16map = "";
+	}
+	void toggle_view(){
+		cout<<"_ed_view:toggle view str\n";
+		if(s_16map==""||s_16map=="-"){
+			cout<<"_ed_view:use basic color set\n";
+			//g_conc.SetRGBmap(15);
+			s_16map = "12:12:12|0:55:218|19:161:14|58:150:221|197:15:31|136:23:152|193:156:0|204:204:204|118:118:118|59:120:255|22:198:12|97:214:214|231:72:86|180:0:158|249:241:165|242:242:242";
+		}
+		wincol wc;
+		int r1 = wc.load_str(s_16map);
+		int r2 = g_conc.RunRGBmap(wc);
+		//g_conc.PrintRGBmap(&wc);
+		//g_conc.SetRGBmap(15);
+		c_code.tog();
+		printf("_ed_view:res1=%d res2=%d\n",r1,r2);
+	}
 };
 _ed_view g_view = {
 };//builtin view
@@ -113,15 +132,6 @@ namespace eview{
 		string fn = exedir_get()+"setting\\"+s+".view";
 		cout<<"load from:"<<fn<<endl;
 		ifstream ifs(fn.c_str());
-		/*ifs>>g_view.c_func>>
-		g_view.c_type>>
-		g_view.c_line>>
-		g_view.c_code>>
-		g_view.c_str>>
-		g_view.c_zs>>
-		g_view.c_def>>
-		g_view.c_sign>>
-		g_view.c_num;*/
 		g_view.c_func=input_cmdcolEx(ifs);
 		g_view.c_type=input_cmdcolEx(ifs);
 		g_view.c_line=input_cmdcolEx(ifs);
@@ -131,7 +141,6 @@ namespace eview{
 		g_view.c_def=input_cmdcolEx(ifs);
 		g_view.c_sign=input_cmdcolEx(ifs);
 		g_view.c_num=input_cmdcolEx(ifs);
-		//getchar();
 		string tmp = "";
 		getline(ifs,tmp);
 		getline(ifs,g_view.v_name);
@@ -140,6 +149,9 @@ namespace eview{
 		ifs>>g_view.b_func>>g_view.b_type>>g_view.b_zs;//加粗设置
 		ifs>>g_view.i_func>>g_view.i_type>>g_view.i_zs;//斜体设置
 		ifs>>g_view.u_func>>g_view.u_type>>g_view.u_zs;//下划线设置
+		getline(ifs,tmp);//EAT CRLF
+		getline(ifs,g_view.s_16map);
+		g_view.toggle_view();
 		ifs.close();
 		cout<<"_ev_loadview:loaded view file\n";
 	}
@@ -151,11 +163,15 @@ namespace eview{
 		return 0;
 	}
 	void _ev_main(){
+		g_conc.SetRGBmap(135);
 		clearInputBuffer();
 		system("cls");
-		EdmoveTo(0,0);g_conc.SetRGBmap(135);
+		EdmoveTo(0,0);
 		string s = "";
 		while(1){
+			g_conc.SetRGBmap(135);
+			//EdmoveTo(0,0);
+			//system("cls");
 			cout<<lan_str(400)<<"\n0.exit\n1.set IDE view\n2.help\n3.now view\n";
 			cin>>s;
 			if(s=="0"){

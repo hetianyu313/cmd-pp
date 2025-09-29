@@ -247,3 +247,72 @@ std::vector<std::string> convertVectorCharToString(const std::vector<char>& char
 
     return result;
 }
+
+class filewrite {
+public:
+    filewrite() = default;
+    explicit filewrite(const std::string& path, bool binary = true) {
+        open(path, binary);
+    }
+    ~filewrite() {
+        close();
+    }
+    bool open(const std::string& path, bool binary = true) {
+        close();
+        std::ios::openmode mode = std::ios::out;
+        if (binary) mode |= std::ios::binary;
+        ofs_.open(path, mode);
+        if (ofs_.is_open()) {
+            path_ = path;
+            return true;
+        } else {
+            path_.clear();
+            return false;
+        }
+    }
+    bool winopen(char* filt, bool binary = true) {
+        std::string chosen = getopenfilename(filt);
+        if (chosen.empty()) return false;
+        return open(chosen, binary);
+    }
+
+    void close() {
+        if (ofs_.is_open()) {
+            ofs_.close();
+        }
+        path_.clear();
+    }
+
+    bool is_open() const {
+        return ofs_.is_open();
+    }
+
+    bool writebuf(const std::vector<char>& buf) {
+        if (!is_open()) return false;
+        if (buf.empty()) return true;
+        ofs_.write(buf.data(), static_cast<std::streamsize>(buf.size()));
+        return static_cast<bool>(ofs_);
+    }
+    bool writestr(const std::vector<std::string>& strs, const std::string& sep = "\n") {
+        if (!is_open()) return false;
+        for (size_t i = 0; i < strs.size(); ++i) {
+            const std::string& s = strs[i];
+            if (!s.empty()) {
+                ofs_.write(s.data(), static_cast<std::streamsize>(s.size()));
+                if (!ofs_) return false;
+            }
+            if (!sep.empty() && i + 1 < strs.size()) {
+                ofs_.write(sep.data(), static_cast<std::streamsize>(sep.size()));
+                if (!ofs_) return false;
+            }
+        }
+        return static_cast<bool>(ofs_);
+    }
+    std::string getpath() const {
+        return path_;
+    }
+
+private:
+    std::ofstream ofs_;
+    std::string path_;
+};

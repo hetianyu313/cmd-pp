@@ -23,14 +23,19 @@ namespace _ed_code{
 	vector<string> v = {""};
 	string g_ktip = "";//按键提示 
 	string g_doc = "";
+	string g_save_encoding = "ansi";
+	string g_save_eol = "lf";
 	int init(){
-		system("cls");
 		Edinit();
 		EdgetConsoleSize(_ed_width,_ed_height);
+		EdSetBufferSize(_ed_width+3,_ed_height*10);
+		EdSetWindowSize(0,0,_ed_width+2,_ed_height+2);
 		_ed_line = _ed_height-10;
 		_ed_top = 0;  // 明确初始化
 		zz_x = 0; zz_y = 0;  // 确保从(0,0)开始
 		v = vector<string>(1, "");  // 明确初始化
+		g_save_encoding = g_cfg.getStr(300);
+		g_save_eol = g_cfg.getStr(301);
 		//printf("_ed_code.init:console size %dx%d\n",_ed_width,_ed_height);
 		return 0;
 	}
@@ -54,7 +59,7 @@ namespace _ed_code{
 	{"virtual",1},{"operator",1},{"typedef",1},{"friend",1},
 	{"new",1},{"extern",1},{"enum",1},{"sizeof",1},{"private",1},
 	{"asm",1},{"delete",1},{"union",1},{"static_cast",1},{"reinterpret_cast",1},
-	{"NULL",1},{"nullptr",1}, 
+	{"NULL",1},{"nullptr",1},
 	};
 	unordered_map<char,bool> mp_c_qh = {
 	{'+',1},{'-',1},{'*',1},{'/',1},{'%',1},{'^',1},{'|',1},{'{',1},{'}',1},{'[',1},
@@ -148,7 +153,7 @@ namespace _ed_code{
 				if(!f_str){
 					no_putchar_this = 1;
 					putchar(c);	
-					if(cnt>zz_y&&col==zz_x)fc_zdbq = 1;
+					//if(cnt>zz_y&&col==zz_x)fc_zdbq = 1;
 					g_view.c_code.tog();
 				}
 				else{
@@ -525,7 +530,7 @@ namespace _ed_code{
 		}
 	}
 	void _edf_pgdn() {
-		if((unsigned int)_ed_top + _ed_line < v.size()) {
+		if((unsigned int)_ed_top + _ed_line < v.size()-1) {
 			_ed_top++;
 			zz_x++;
 			// 光标位置校正（包含边界检查）
@@ -555,7 +560,6 @@ namespace _ed_code{
 			}
 			else if(c=='\t'){
 				s+="    ";
-				cnt+=3;
 			}
 			else{
 				s+=c;
@@ -567,8 +571,6 @@ namespace _ed_code{
 		zz_y = 0;
 		_ed_top = 0;
 	}
-	string g_save_encoding = "ansi";
-	string g_save_eol = "lf";
 	void _edf_save_file(){
   		system("cls");
 		char c;
@@ -579,9 +581,9 @@ namespace _ed_code{
 			clearInputBuffer();
 			getline(cin,fn);
 		}
-		else{
+		/*else{
 			fn = fn.substr(0,fn.find_last_of("."))+".cpp";
-		}
+		}*/
 		cout<<lan_str(224)<<":"<<fn<<endl;
 		ofstream ofs(fn, ios::binary);
 		string eol = (g_save_eol=="crlf")? "\r\n" : "\n";
@@ -666,13 +668,19 @@ namespace _ed_code{
 
 	    return result;
 	}
-	void _edf_load_file(){
-	    system("cls");
-	    clearInputBuffer();
-	    EdmoveTo(0,0); g_conc.SetRGBmap(135);
-	    cout<<lan_str(223)<<"\n";  // 输入文件名
-	    string fn;
-	    getline(cin,fn);
+	void _edf_load_file(string fn1 = ""){
+		string fn = "";
+		system("cls");
+		if(fn1==""){
+		    clearInputBuffer();
+		    EdmoveTo(0,0); g_conc.SetRGBmap(135);
+		    cout<<lan_str(223)<<"\n";  // 输入文件名
+		    fn = fn1;
+		    getline(cin,fn);
+		}
+		else{
+			fn = fn1;
+		}
 	    _ed_cpp::_ed_in_f = fn;
 	    v.clear();
 	    //cout<<lan_str(242)<<"\n1.ANSI\n2.UTF8\n3.UTF16\n";
@@ -1010,7 +1018,7 @@ namespace _ed_code{
 	        edt_pause();
 	    }
 	}
-	void _edf_replace_regex() {//z正则替换
+	void _edf_replace_regex() {//正则替换
 	    system("cls");
 	    clearInputBuffer();
 	    EdmoveTo(0,0); g_conc.SetRGBmap(135);
@@ -1211,8 +1219,18 @@ namespace _ed_code{
 		system("cls");
 		_ed_flash();
 	}
-	void _edf_flash1(){
+	void basic_cls(){
+		g_conc.SetRGBmap(7);
+		EdmoveTo(0,0);
+		for(int i = 0;i<50;i++){
+			for(int j = 0;j<12;j++)cout<<"          ";
+			putchar('\n');
+		}
+		EdmoveTo(0,0);
 		system("cls");
+	}
+	void _edf_flash1(){
+		basic_cls();
 		DWORD mode;
 		GetConsoleMode(hConsole, &mode);
 		SetConsoleMode(hConsole, ENABLE_PROCESSED_INPUT | ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT);
@@ -1321,35 +1339,53 @@ namespace _ed_code{
 	    EdmoveTo(zz_x-_ed_top, zz_y+3);
 	    return 0;
 	}
+	void _ed_buildinfo(){
+		cout<<"_ed_buildinfo:Build Info\n";
+		cout<<" basic:"<<g_cfg.getStr(200)<<endl;
+		cout<<" tool:"<<g_cfg.getStr(201)<<endl;
+		cout<<" web:"<<g_cfg.getStr(202)<<endl;
+		cout<<" more:"<<g_cfg.getStr(203)<<endl;
+		cout<<" time:"<<g_cfg.getStr(204)<<endl;
+	}
 }
+//consolenoclose cnc;
 int main(){
+	system("cls");
 	cout<<"main:start console c++ ide\n";
 	SetConsoleTitle("Console C++ IDE");
 	_ed_code::hInput = GetStdHandle(STD_INPUT_HANDLE);
 	_ed_code::hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-	_ed_code::init();
 	_ed_cpp::init();
+	cout<<"main:load configs\n";
+	cfg::init();//config
+	_ed_code::init();
 	cout<<"main:display system info\n";
-	system((exedir+"\\tool\\editorsys.exe").c_str());
+	system((exedir+"tool\\editorsys.exe").c_str());
 	SetConsoleOutputCP(CP_UTF8);
 	SetConsoleCP(CP_UTF8);
+	cex::init();
 	cwh::init();
 	eview::init();
 	srf::init();
-	_ed_code::_edf_nopaste();
+	//_ed_code::_edf_nopaste();
 	_ed_code::load_docmap();
+	cout<<"main:load plugins\n";
 	load_hooks();
 	elang::init();
 	xgj::init();
+	//cnc.run();
+	_ed_code::_ed_buildinfo();
 	cout<<"main:vt support = "<<g_vt_support<<endl;
+	cout<<"main:palette_supported = "<<g_conc.palette_supported<<endl;
+	cout<<"main:WindowsTerminalHost = "<<IsWindowsTerminalHost()<<endl;
 	if(g_vt_support==0){
 		cout<<lan_str(244)<<endl;
 	}
-	PrintGradientText("main:init all end\n",217,192,80,53,212,217);
-	PrintGradientText("Console C++ IDE by hetianyu313\n",217,192,80,53,212,217);
-	g_view.c_line.tog();
+	system("color");
+	PrintGradientText("main:init all end\n",g_cfg.getColor(302),g_cfg.getColor(303));
+	PrintGradientText("Console C++ IDE by hetianyu313\n",g_cfg.getColor(302),g_cfg.getColor(303));
 	edt_pause();
-	system("cls");
+	_ed_code::basic_cls();
 	//Sleep(500);
 	_ed_code::_ed_flash();
 	while(1){

@@ -53,6 +53,7 @@ namespace elang{
 		EdmoveTo(0,0);g_conc.SetRGBmap(135);
 		string s = "";
 		while(1){
+			g_conc.SetRGBmap(135);
 			cout<<lan_str(500)<<"\n0.exit\n1.set language\n2.help\n3.now language\n";
 			cin>>s;
 			if(s=="0"){

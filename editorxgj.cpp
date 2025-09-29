@@ -4,15 +4,15 @@
 #include "editorchar.cpp"
 #include "editorview.cpp"
 #include "tool\editorfile.cpp"
-
+#include "editorweb.cpp"
 //editorxgj.cpp 2025.09
 using namespace std;
 namespace xgj{
 	int getrandyq(int YEAR, int MONTH, int DAY, const string &S){//HASH
 	    string key = to_string(YEAR)+ "-" + to_string(MONTH)+ "-" + to_string(DAY)+ "-" + S;
-	    unsigned long hash = 5381;
+	    unsigned long long hash = 5381;
 	    for (char c : key){
-	        hash = ((hash<<5)+ hash)+ (unsigned char)c;
+	        hash = (((hash<<5)+ hash)+ (unsigned char)c + 78)%11451419;
 	    }
 	    return (int)(hash % 32768);
 	}
@@ -92,12 +92,14 @@ namespace xgj{
 	        return getrandyq(dt.year,dt.month,dt.day,uname+"_"+to_string(idx*(dt.day%10+1))+"-"+to_string((int)(dt.month*131+idx+dt.year*129+dt.day)%256));
 	    };
 	    resultys res;
+	    res.yi.clear();
+	    res.ji.clear();
 	    if(mode!=1){ // 需要抽取宜
 	        unordered_set<int> used;
 	        for(int k=0;k<2 &&!uy1.empty();k++){
 	            int r;
 	            do{
-	                r = nextRand(k)% uy1.size();
+	                r = nextRand(78+k)% uy1.size();
 	            }while(used.count(r));
 	            used.insert(r);
 	            res.yi.push_back(uy1[r]);
@@ -108,7 +110,7 @@ namespace xgj{
 	        for(int k=0;k<2 &&!uy2.empty();k++){
 	            int r;
 	            do{
-	                r = nextRand(100+k)% uy2.size();
+	                r = nextRand(91+k)% uy2.size();
 	            }while(used.count(r));
 	            used.insert(r);
 	            res.ji.push_back(uy2[r]);
@@ -124,7 +126,7 @@ namespace xgj{
 		cout<<s<<endl;
 		Date dt = GetDate();
 		cout<<dt.year<<"-"<<dt.month<<"-"<<dt.day<<endl;
-		int rand_ys = getrandyq(dt.year,dt.month,dt.day,GetUserNameString())%100;
+		int rand_ys = (getrandyq(dt.year,dt.month,dt.day,GetUserNameString())+50)%100;
 		int ys_tp = -1, ys_mode = 0;
 		if(rand_ys<=8){
 			g_conc.SetRGBmap(244);
@@ -852,6 +854,225 @@ namespace xgj{
 			edt_pause();
 		}
 	}
+	void u_uiopen(){
+		clearInputBuffer();
+		system("cls");
+		EdmoveTo(0,0);g_conc.SetRGBmap(135);
+		fileread fr;
+		fr.winopen(0,(char*)"所有文件\0*\0\0");
+		cout<<"path="<<AnsiToUtf8(fr.getpath())<<endl;
+		edt_pause();
+		//to do here
+	}
+	void u_urldown(){
+		clearInputBuffer();
+		system("cls");
+		EdmoveTo(0,0);g_conc.SetRGBmap(135);
+		string s1,s2;
+		cout<<"input url\n";
+		getline(cin,s1);
+		cout<<"input file name\n";
+		getline(cin,s2);
+		urldown ud;
+		ud.init(s1,s2);
+		ud.downht();
+		cout<<"run downland thread...\n";
+		downinfo di;
+		while(1){
+			Sleep(1000);
+			ud.xzinfo(di);
+			cout<<"=====downland info=====\n";
+			cout<<"size:"<<di.downloaded_bytes<<"/"<<di.total_bytes<<"\n";
+			cout<<"speed:"<<(int)di.speed<<"\n";
+			cout<<"status:"<<di.status_text<<"["<<di.status_code<<"]\n";
+			if(di.completed) break;
+		}
+		edt_pause();
+	}
+	void u_help_d(){
+		string fn = exedir+"~temp_help";
+		urldown ud;
+		ud.init("https://raw.githubusercontent.com/hetianyu313/cmd-pp/refs/heads/main/help.txt",fn);
+		ud.downht();
+		g_conc.SetRGBmap(11);
+		cout<<"downland started\n";
+		cout<<"Please make sure Github is avaliable now!\n";
+		g_conc.SetRGBmap(135);
+		downinfo di;
+		while(1){
+			Sleep(1000);
+			ud.xzinfo(di);
+			cout<<"=====downland info=====\n";
+			cout<<"size:"<<di.downloaded_bytes<<"/"<<di.total_bytes<<"\n";
+			cout<<"speed:"<<(int)di.speed<<"\n";
+			cout<<"status:"<<di.status_text<<"["<<di.status_code<<"]\n";
+			if(di.completed) break;
+		}
+		cout<<"reading file\n";
+		ifstream ifs(fn.c_str());
+		stringstream buffer;
+		buffer<<ifs.rdbuf();
+	    string data = buffer.str();
+	    data = replaceall(data,"\\033","\033");
+	    data = replaceall(data,"\\^033","\\033");
+	    data = replaceall(data,"\\a","\a");
+		cout<<"print help\n";
+		g_conc.SetRGBmap(15);
+		system("cls");
+	    g_conc.SetRGBmap(135);
+		cout<<"=========="<<lan_str(619)<<"==========\n";
+		g_conc.SetRGBmap(15);
+	    cout<<data<<endl;
+	    g_conc.SetRGBmap(135);
+	    edt_pause();
+	}
+    void u_apcolor(){
+		clearInputBuffer();
+		system("cls");
+		EdmoveTo(0,0);g_conc.SetRGBmap(135);
+    	cout<<"1.output\n2.input\n3.print\n";
+    	g_conc.SetRGBmap(134);
+    	cout<<"input is not avaliable in Windows Terminal\n";
+    	cout<<"input is avaliable in Old Terminal\n";
+    	g_conc.SetRGBmap(135);
+    	int a,r = 999;
+		cin>>a;
+		if(a==1){
+			wincol wc;
+			r = g_conc.ReadRGBmap(wc);
+			string s = wc.to_str();
+			cout<<"PaletteString\n"<<s<<endl;
+			cout<<"result="<<r<<endl;
+		}
+		else if(a==2){
+			string s;
+			cout<<"input PaletteString\n";
+			cin>>s;
+			wincol wc;
+			r = wc.load_str(s);
+			cout<<"result="<<r<<endl;
+			r = g_conc.RunRGBmap(wc);
+			g_conc.SetRGBmap(135);
+			cout<<"result="<<r<<endl;
+		}
+		else if(a==3){
+			g_conc.SetRGBmap(7);
+			g_conc.PrintRGBmap();
+			g_conc.SetRGBmap(135);
+		}
+		edt_pause();
+	}
+	// 判断闰年
+	bool RlIsLeap(int year) {
+	    return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
+	}
+
+	// 获取某年某月的天数
+	int RlGetMonthDays(int year, int month) {
+	    static const int mdays[12] = {
+	        31,28,31,30,31,30,31,31,30,31,30,31
+	    };
+	    if (month == 2 && RlIsLeap(year)) return 29;
+	    return mdays[month-1];
+	}
+
+	// 返回指定年月日是星期几：0=周日 … 6=周六
+	int RlGetWeekday(int year, int month, int day) {
+	    std::tm t = {};
+	    t.tm_year = year - 1900;
+	    t.tm_mon  = month - 1;
+	    t.tm_mday = day;
+	    std::mktime(&t);      // 填充 tm_wday
+	    return t.tm_wday;
+	}
+
+	// 打印某年月的日历
+	void RlPrintMonth(int year, int month) {
+	    // 月份标题
+	    std::cout << "      "
+	              << year <<lan_str(630)
+	              << month <<lan_str(631)<< "\n";
+	    // 星期表头
+	    std::cout << " Su Mo Tu We Th Fr Sa\n";
+
+	    int firstWd = RlGetWeekday(year, month, 1);
+	    int days     = RlGetMonthDays(year, month);
+
+	    // 首行前置空格
+	    for (int i = 0; i < firstWd; ++i) {
+	        std::cout << "   ";
+	    }
+
+	    int wd = firstWd;
+	    for (int d = 1; d <= days; ++d) {
+	        // 根据星期设置颜色：周日红(196)、周六蓝(27)、其它白(7)
+	        if (wd == 0)       g_conc.SetRGBmap(196);
+	        else if (wd == 6)  g_conc.SetRGBmap(27);
+	        else               g_conc.SetRGBmap(7);
+
+	        std::cout << std::setw(3) << d;
+	        ResetFormat();
+
+	        if (wd == 6) {
+	            std::cout << "\n";
+	            wd = 0;
+	        }
+	        else {
+	            ++wd;
+	        }
+	    }
+	    if (wd != 0) std::cout << "\n";
+	}
+
+	// 主入口：读取用户输入的年月（或回车使用当前年月），并打印日历
+	void RlMain() {
+	    // 获取当前年月作为默认
+	    std::time_t now = std::time(nullptr);
+	    std::tm* lt = std::localtime(&now);
+	    int year  = lt->tm_year + 1900;
+	    int month = lt->tm_mon  + 1;
+
+	    std::cout << lan_str(632)
+	              << year << lan_str(630) << month << lan_str(631)
+	              << " ):\n> ";
+
+	    // 用 getline 读取整行
+	    std::string line;
+	    std::getline(std::cin, line);
+	    std::getline(std::cin, line);
+	    // 判断是否真的输入了内容（剔除空白后长度>0）
+	    auto first_non_ws = line.find_first_not_of(" \t\r\n");
+	    if (first_non_ws != std::string::npos) {
+	        // 非空行，尝试解析两个整数
+	        std::istringstream iss(line);
+	        int y, m;
+	        if (iss >> y >> m) {
+	            if (m >= 1 && m <= 12) {
+	                year  = y;
+	                month = m;
+	            }
+	            else {
+	                std::cout << lan_str(633)
+	                          << " Continue using month " << month << "\n";
+	            }
+	        }
+	        else {
+	            // 解析失败，使用默认
+	            std::cout << lan_str(634) << "\n";
+	        }
+	    }
+	    else {
+	        // 直接敲回车，line 为空或全空白
+	        std::cout << lan_str(634) << "\n";
+	    }
+
+	    // 打印日历
+	    RlPrintMonth(year, month);
+	    std::cout << "\n";
+
+	    // 等待用户按键
+	    edt_pause();
+	}
 	void main(const vector<string> &ed_lines={""}){
 		clearInputBuffer();
 		system("cls");
@@ -876,6 +1097,21 @@ namespace xgj{
 		}
 		else if(i==6){
 			u_copy_brain();
+		}
+		else if(i==7){
+			u_uiopen();
+		}
+		else if(i==8){
+			u_urldown();
+		}
+		else if(i==9){
+			u_help_d();
+		}
+		else if(i==10){
+			u_apcolor();
+		}
+		else if(i==11){
+			RlMain();
 		}
 	}
 }

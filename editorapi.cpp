@@ -244,6 +244,37 @@ EDITOR string EdGetPassword(const string& prompt = "Password: ") {
     cout << endl;
     return password;
 }
+// 设置控制台缓冲区大小
+// width, height: 新的缓冲区宽、高（字符数）
+// 返回 true 表示成功，false 表示失败（可通过 GetLastError() 进一步排查原因）
+EDITOR bool EdSetBufferSize(int width, int height) {
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (hConsole == INVALID_HANDLE_VALUE) return false;
+
+    // 缓冲区尺寸
+    COORD bufSize;
+    bufSize.X = static_cast<SHORT>(width);
+    bufSize.Y = static_cast<SHORT>(height);
+
+    // 调用 WinAPI
+    return SetConsoleScreenBufferSize(hConsole, bufSize);
+}
+// 可选：设置控制台窗口尺寸（注意：窗口大小不能大于缓冲区大小）
+// left, top, right, bottom: 窗口在缓冲区中的区域（0-based，下标最大为缓冲区宽高-1）
+// 返回 true 表示成功，false 表示失败
+EDITOR bool EdSetWindowSize(int left, int top, int right, int bottom) {
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (hConsole == INVALID_HANDLE_VALUE) return false;
+
+    SMALL_RECT windowRect;
+    windowRect.Left   = static_cast<SHORT>(left);
+    windowRect.Top    = static_cast<SHORT>(top);
+    windowRect.Right  = static_cast<SHORT>(right);
+    windowRect.Bottom = static_cast<SHORT>(bottom);
+
+    // 调用 WinAPI
+    return SetConsoleWindowInfo(hConsole, TRUE, &windowRect);
+}
 //输出网址
 EDITOR void EdWriteUrl(const std::string& displayName, const std::string& url) {
     if (g_vt_support) {
@@ -253,4 +284,77 @@ EDITOR void EdWriteUrl(const std::string& displayName, const std::string& url) {
         cout << displayName << " (" << url << ")";
     }
 }
+#include <thread>
+class consolenoclose
+{
+public:
+	void run(){
+        hWnd = GetConsoleWindow();
+        if (hWnd)
+        {
+            HMENU hMenu = GetSystemMenu(hWnd, FALSE);
+            if (hMenu)
+            {
+                // remove the Close entry
+                DeleteMenu(hMenu, SC_CLOSE, MF_BYCOMMAND);
+                DrawMenuBar(hWnd);
+            }
+        }
+
+        // swallow console control events
+        SetConsoleCtrlHandler(HandlerRoutine, TRUE);
+
+        // start background thread to keep it disabled
+        worker = std::thread(&consolenoclose::KeepDisabled, this);
+        worker.detach();
+	}
+    // ctor: disable close button & CTRL+C, start background thread
+    consolenoclose(){}
+
+    // dtor: uninstall handler
+    ~consolenoclose()
+    {
+        SetConsoleCtrlHandler(HandlerRoutine, FALSE);
+    }
+
+private:
+    HWND             hWnd;
+    std::thread      worker;
+
+    // console‐ctrl handler: return TRUE to say "handled" => prevents default action
+    static BOOL WINAPI HandlerRoutine(DWORD ctrlType)
+    {
+        switch (ctrlType)
+        {
+            case CTRL_C_EVENT:
+            case CTRL_BREAK_EVENT:
+            case CTRL_CLOSE_EVENT:
+            case CTRL_LOGOFF_EVENT:
+            case CTRL_SHUTDOWN_EVENT:
+                return TRUE;
+            default:
+                return FALSE;
+        }
+    }
+
+    // periodically re‐gray out the Close menu item
+    void KeepDisabled()
+    {
+        while (true)
+        {
+            if (hWnd)
+            {
+                HMENU hMenu = GetSystemMenu(hWnd, FALSE);
+                if (hMenu)
+                {
+                    EnableMenuItem(hMenu,
+                                   SC_CLOSE,
+                                   MF_BYCOMMAND | MF_GRAYED);
+                    DrawMenuBar(hWnd);
+                }
+            }
+            Sleep(5000); // 5 second
+        }
+    }
+};
 #endif //EDITORAPI_INC
